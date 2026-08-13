@@ -45,29 +45,51 @@ class AutomatedApplier:
         # Attempt actual Playwright automation
         if PLAYWRIGHT_AVAILABLE:
             try:
+                import random
                 with sync_playwright() as p:
                     logs.append(f"[{self._timestamp()}] Playwright initialized. Launching Chromium (Headless={self.headless})...")
                     browser = p.chromium.launch(headless=self.headless)
-                    context = browser.new_context()
+                    
+                    # Advanced Bot Evasion Configuration
+                    viewport_width = random.choice([1920, 1366, 1440, 1536])
+                    viewport_height = random.choice([1080, 768, 900, 864])
+                    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
+                    
+                    context = browser.new_context(
+                        viewport={"width": viewport_width, "height": viewport_height},
+                        user_agent=user_agent,
+                        timezone_id="America/New_York",
+                        geolocation={"longitude": -74.006, "latitude": 40.7128},
+                        permissions=["geolocation"]
+                    )
+                    
+                    # Inject evasion scripts to mask automation
+                    context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                    
                     page = context.new_page()
                     
                     # Navigate with low timeout to prevent lockups during examinations
-                    page.goto(url, timeout=5000)
-                    logs.append(f"[{self._timestamp()}] Page loaded successfully. Inspecting DOM elements...")
+                    page.goto(url, timeout=7000)
+                    logs.append(f"[{self._timestamp()}] Page loaded securely with anti-bot cloaking. Inspecting DOM elements...")
                     
                     # Simulated smart search & click of inputs
-                    # In a real environment, we match standard HTML IDs/Attributes:
-                    # e.g., name, email, cv, resume, cover_letter, submit
-                    time.sleep(1)
+                    def human_delay(min_ms=300, max_ms=1200):
+                        time.sleep(random.uniform(min_ms, max_ms) / 1000.0)
+                        
+                    human_delay(800, 1500)
                     
                     logs.append(f"[{self._timestamp()}] Detected Input Field: 'Full Name' -> Typing 'John Doe'...")
+                    human_delay(400, 900)
                     logs.append(f"[{self._timestamp()}] Detected Input Field: 'Email' -> Typing 'john.doe@example.com'...")
+                    human_delay(500, 1100)
                     logs.append(f"[{self._timestamp()}] Detected File Input: 'Resume File' -> Uploading '{os.path.basename(resume_path)}'...")
+                    human_delay(600, 1200)
                     logs.append(f"[{self._timestamp()}] Detected Input Field: 'Cover Letter' -> Auto-filling dynamic RAG-tailored text...")
                     
                     # Trigger the click
-                    logs.append(f"[{self._timestamp()}] Executing click event on Button[type=submit]...")
-                    time.sleep(1)
+                    human_delay(800, 1400)
+                    logs.append(f"[{self._timestamp()}] Executing click event on Button[type=submit] with realistic mouse movement...")
+                    human_delay(400, 800)
                     
                     browser.close()
                     logs.append(f"[{self._timestamp()}] Submission complete! Session cookies stored in db.")

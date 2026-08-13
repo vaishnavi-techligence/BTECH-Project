@@ -191,6 +191,71 @@ class EvaluatorMetrics:
             "retries_handled": retries
         }
 
+    # --- 5. Clarity & Readability Index ---
+    def calculate_clarity_score(self, text: str) -> dict:
+        """
+        Computes a Clarity & Readability Index based on Flesch-Kincaid principles,
+        sentence structural complexity, and word length density.
+        Returns a clarity score from 0 to 100, where higher is more clear and direct.
+        """
+        if not text or len(text.strip()) == 0:
+            return {"clarity_score": 0.0, "flesch_reading_ease": 0.0, "verdict": "Empty Text"}
+            
+        # Split by punctuation that ends sentences
+        sentences = [s.strip() for s in re.split(r'[.!?\n]+', text) if len(s.strip()) > 3]
+        # Extract all words
+        words = re.findall(r'\b\w+\b', text.lower())
+        
+        num_sentences = max(1, len(sentences))
+        num_words = max(1, len(words))
+        
+        # Simple Syllable Counter Heuristic
+        def count_syllables(word):
+            word = word.lower()
+            if len(word) <= 3: return 1
+            word = re.sub(r'(?:[^laeiouy]es|ed|[^laeiouy]e)$', '', word)
+            word = re.sub(r'^y', '', word)
+            vowels = re.findall(r'[aeiouy]{1,2}', word)
+            return max(1, len(vowels))
+            
+        num_syllables = sum(count_syllables(w) for w in words)
+        
+        # Flesch Reading Ease Math
+        # 206.835 - 1.015 * (words/sentences) - 84.6 * (syllables/words)
+        flesch_score = 206.835 - 1.015 * (num_words / num_sentences) - 84.6 * (num_syllables / num_words)
+        flesch_score = max(0.0, min(100.0, flesch_score))
+        
+        # Calculate Avg Sentence Length (Ideal is ~15-20 words for clarity)
+        avg_sentence_length = num_words / num_sentences
+        sentence_length_penalty = max(0.0, avg_sentence_length - 20.0) * 1.5
+        
+        # Calculate complex words density (words with >= 3 syllables)
+        complex_words = sum(1 for w in words if count_syllables(w) >= 3)
+        complex_density = (complex_words / num_words) * 100.0 if num_words > 0 else 0.0
+        
+        # Final Clarity Score Formulation
+        # Normalize flesch score (0-100), penalize overly long sentences and extreme complex word density
+        clarity_score = flesch_score - sentence_length_penalty - (complex_density * 0.5)
+        clarity_score = max(0.0, min(100.0, clarity_score))
+        
+        # Verdict based on clarity score
+        if clarity_score >= 80.0:
+            verdict = "Highly Clear & Direct"
+        elif clarity_score >= 60.0:
+            verdict = "Clear & Professional"
+        elif clarity_score >= 40.0:
+            verdict = "Complex, needs simplification"
+        else:
+            verdict = "Dense & Hard to Read"
+            
+        return {
+            "clarity_score": round(clarity_score, 2),
+            "flesch_reading_ease": round(flesch_score, 2),
+            "avg_sentence_length": round(avg_sentence_length, 1),
+            "complex_word_density_percent": round(complex_density, 1),
+            "verdict": verdict
+        }
+
 if __name__ == "__main__":
     print("Testing EvaluatorMetrics...")
     evaluator = EvaluatorMetrics()
@@ -210,3 +275,11 @@ if __name__ == "__main__":
     )
     print("\n--- Intrinsic Dim ---")
     print(dim)
+    
+    # Test Clarity Index
+    clarity = evaluator.calculate_clarity_score(
+        "This is a highly clear and concise sentence. It directly communicates the main point without utilizing excessive jargon or obfuscation."
+    )
+    print("\n--- Clarity Index ---")
+    print(clarity)
+

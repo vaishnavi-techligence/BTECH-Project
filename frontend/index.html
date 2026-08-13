@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Job Application Automation System — Viva Dashboard</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <title>SmartApply — Executive Career Intelligence Studio</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260726">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
   <!-- LOADING OVERLAY -->
   <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
-    <h3 style="font-family: var(--font-heading);">Executing Sequential Agent Pipeline...</h3>
-    <p style="color: var(--text-secondary); font-size: 0.9rem;">Processing RAG alignments and neutralising fingerprints</p>
+    <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.3rem;">Executing Sequential Agent Pipeline...</h3>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">Processing RAG vector alignments & neutralising fingerprint heuristics</p>
   </div>
 
   <div class="dashboard-container">
@@ -21,20 +21,23 @@
     <!-- SIDEBAR -->
     <aside>
       <div class="logo-container">
-        <div class="logo-glow"></div>
-        <div class="logo-text">AURA Systems</div>
+        <div class="logo-glow"><i class="fa-solid fa-layer-group"></i></div>
+        <div>
+          <div class="logo-text">SmartApply</div>
+          <div style="font-size: 0.72rem; color: var(--primary-glow); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">AI Career Studio</div>
+        </div>
       </div>
       
       <ul class="nav-links">
         <li>
           <a class="nav-item active" onclick="switchTab('tab-dashboard', this)">
-            <i class="fa-solid fa-chart-line"></i>
+            <i class="fa-solid fa-chart-pie"></i>
             <span>Overview & GCR</span>
           </a>
         </li>
         <li>
           <a class="nav-item" onclick="switchTab('tab-kanban', this)">
-            <i class="fa-solid fa-list-check"></i>
+            <i class="fa-solid fa-table-columns"></i>
             <span>Kanban Pipeline</span>
           </a>
         </li>
@@ -46,27 +49,30 @@
         </li>
         <li>
           <a class="nav-item" onclick="switchTab('tab-scheduler', this)">
-            <i class="fa-solid fa-clock"></i>
+            <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Queue Scheduler</span>
           </a>
         </li>
         <li>
           <a class="nav-item" onclick="switchTab('tab-graph', this)">
-            <i class="fa-solid fa-circle-nodes"></i>
+            <i class="fa-solid fa-diagram-project"></i>
             <span>Mobility Graph</span>
           </a>
         </li>
         <li>
           <a class="nav-item" onclick="switchTab('tab-crawler', this)">
-            <i class="fa-solid fa-spider"></i>
+            <i class="fa-solid fa-globe"></i>
             <span>Online Crawler</span>
           </a>
         </li>
       </ul>
-
-      <div style="margin-top: auto; padding: 1rem; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass);">
-        <h4 style="font-size: 0.82rem; margin-bottom: 0.4rem; color: #fff;">B.Tech Viva Sandbox</h4>
-        <p style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.3;">Academic Innovation Model active. Real-time Ollama / vector matrices loaded.</p>
+      
+      <div style="margin-top: auto; padding: 1rem; background: var(--bg-pill); border: 1px solid var(--border-glass); border-radius: 14px;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">System Health</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: 600;">
+          <span style="color: var(--text-primary);">AFLOW Engine V2</span>
+          <span style="color: var(--accent-emerald); font-size: 0.78rem;">● Online</span>
+        </div>
       </div>
     </aside>
 
@@ -76,47 +82,82 @@
       <!-- HEADER BAR -->
       <div class="header-bar">
         <div class="header-title">
+          <div class="status-badge">
+            <span class="pulse-dot"></span>
+            <span>Pipeline Active • SQLite Connected</span>
+          </div>
           <h1 id="main-title">Intelligence Diagnostic Hub</h1>
           <p id="main-subtitle">RAG alignment ratios, agent performance matrices, and multi-agent queue metrics.</p>
         </div>
-        <button class="custom-button" onclick="refreshDashboardData()" style="padding: 0.6rem 1.2rem; font-size: 0.88rem;">
-          <i class="fa-solid fa-arrows-rotate"></i> Sync Live Data
-        </button>
+        <div style="display: flex; gap: 0.8rem; align-items: center;">
+          <button class="custom-button secondary" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Light/Dark Mode" style="padding: 0.75rem 1rem; font-size: 0.95rem;">
+            <i class="fa-solid fa-sun" id="theme-icon"></i>
+          </button>
+          <button class="custom-button secondary" onclick="refreshDashboardData()" style="padding: 0.75rem 1.4rem; font-size: 0.9rem;">
+            <i class="fa-solid fa-arrows-rotate"></i> Sync Live Data
+          </button>
+        </div>
       </div>
 
       <!-- 1. TAB: OVERVIEW & DIAGNOSTICS -->
       <div id="tab-dashboard" class="tab-content active">
         <div class="stats-row">
           <div class="glass-panel stat-card">
-            <div class="stat-title">Parsed & Matched</div>
+            <div class="stat-title">
+              <span>Parsed & Matched</span>
+              <i class="fa-solid fa-database" style="color: var(--primary-glow); font-size: 1.1rem;"></i>
+            </div>
             <div class="stat-value" id="stat-total-jobs">0</div>
-            <div class="stat-footer" style="color: var(--primary-glow);"><i class="fa-solid fa-database"></i> SQLite Active</div>
+            <div class="stat-footer" style="color: var(--accent-emerald);">
+              <i class="fa-solid fa-circle-check"></i> SQLite Active Engine
+            </div>
           </div>
+          
           <div class="glass-panel stat-card">
-            <div class="stat-title">Goal Completion Rate (GCR)</div>
+            <div class="stat-title">
+              <span>Goal Completion Rate</span>
+              <i class="fa-solid fa-bullseye" style="color: var(--secondary-glow); font-size: 1.1rem;"></i>
+            </div>
             <div class="stat-value" id="stat-gcr">0%</div>
-            <div class="stat-footer"><i class="fa-solid fa-check-double"></i> Agent Completion Index</div>
+            <div class="stat-footer" style="color: var(--primary-glow);">
+              <i class="fa-solid fa-arrow-trend-up"></i> Agent Completion Index
+            </div>
           </div>
+          
           <div class="glass-panel stat-card">
-            <div class="stat-title">Task Resilience (MTR)</div>
+            <div class="stat-title">
+              <span>Task Resilience (MTR)</span>
+              <i class="fa-solid fa-shield-halved" style="color: var(--accent-purple); font-size: 1.1rem;"></i>
+            </div>
             <div class="stat-value" id="stat-mtr">0%</div>
-            <div class="stat-footer" style="color: var(--accent-purple);"><i class="fa-solid fa-shield-halved"></i> Fault-Recovery Rate</div>
+            <div class="stat-footer" style="color: var(--accent-purple);">
+              <i class="fa-solid fa-rotate-left"></i> Fault-Recovery Rate
+            </div>
           </div>
+          
           <div class="glass-panel stat-card">
-            <div class="stat-title">Mean G-Eval Judge</div>
+            <div class="stat-title">
+              <span>Mean G-Eval Judge</span>
+              <i class="fa-solid fa-award" style="color: var(--accent-amber); font-size: 1.1rem;"></i>
+            </div>
             <div class="stat-value" id="stat-geval">0.0/5</div>
-            <div class="stat-footer" style="color: var(--accent-rose);"><i class="fa-solid fa-medal"></i> Recurrent Rubrics</div>
+            <div class="stat-footer" style="color: var(--accent-amber);">
+              <i class="fa-solid fa-star"></i> Recurrent LLM Rubrics
+            </div>
           </div>
         </div>
 
         <div class="chart-grid">
           <!-- Main Diagnostics Plot -->
           <div class="glass-panel chart-card">
-            <h3 style="margin-bottom: 1.2rem; font-size: 1.1rem; color: #fff;">AFLOW Template Success Rates (got reply / total)</h3>
-            <div style="height: 250px; display: flex; align-items: flex-end; gap: 3rem; padding-top: 1rem; border-bottom: 1px solid var(--border-glass);" id="aflow-bar-chart">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+              <h3 style="font-size: 1.15rem; color: var(--text-primary);">AFLOW Template Success Rates</h3>
+              <span style="font-size: 0.78rem; color: var(--text-muted); background: var(--bg-pill); padding: 0.2rem 0.6rem; border-radius: 6px;">Response / Total</span>
+            </div>
+            <div style="height: 250px; display: flex; align-items: flex-end; gap: 3.5rem; padding-top: 1rem; border-bottom: 1px solid var(--border-glass);" id="aflow-bar-chart">
               <!-- Rendered Dynamically via JS -->
             </div>
-            <div style="display: flex; justify-content: space-around; margin-top: 0.8rem; font-size: 0.82rem; color: var(--text-secondary);">
+            <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">
               <div>Aggressive Metrics</div>
               <div>Humble Learner</div>
               <div>Direct Value Proposer</div>
@@ -124,31 +165,37 @@
           </div>
 
           <!-- Quick Metrics List -->
-          <div class="glass-panel chart-card" style="display: flex; flex-direction: column; gap: 1.2rem;">
-            <h3 style="font-size: 1.1rem; color: #fff;">System Latency & Geometry</h3>
+          <div class="glass-panel chart-card" style="display: flex; flex-direction: column; gap: 1.4rem;">
+            <h3 style="font-size: 1.15rem; color: var(--text-primary);">System Latency & Geometry</h3>
             
-            <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem;">
+            <div style="background: var(--bg-pill); padding: 1.2rem; border-radius: 14px; border: 1px solid var(--border-glass);">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; margin-bottom: 0.6rem;">
                 <span style="color: var(--text-secondary);">Recos Rank Comp. Latency</span>
-                <span style="color: var(--primary-glow); font-weight: 600;">14.2 ms</span>
+                <span style="color: var(--primary-glow); font-weight: 700; font-family: var(--font-mono);">14.2 ms</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.88rem;">
+              <div style="width: 100%; height: 6px; background: rgba(15, 23, 42, 0.15); border-radius: 3px; overflow: hidden; margin-bottom: 0.8rem;">
+                <div style="width: 25%; height: 100%; background: var(--primary-glow); box-shadow: 0 0 10px var(--primary-glow);"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                 <span style="color: var(--text-secondary);">Intrinsic Dimension Avg</span>
-                <span style="color: var(--primary-glow); font-weight: 600;">3.14 (Geometric)</span>
+                <span style="color: var(--secondary-glow); font-weight: 700;">3.14 (Geometric)</span>
               </div>
             </div>
 
-            <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <h4 style="font-size: 0.85rem; margin-bottom: 0.6rem; color: #fff;">Dual-ATS Fairness Averages</h4>
-              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.3rem;">
+            <div style="background: var(--bg-pill); padding: 1.2rem; border-radius: 14px; border: 1px solid var(--border-glass);">
+              <h4 style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between;">
+                <span>Dual-ATS Fairness Averages</span>
+                <span style="font-size: 0.72rem; color: var(--accent-purple); background: rgba(168, 85, 247, 0.15); padding: 0.15rem 0.5rem; border-radius: 6px;">Unbiased</span>
+              </h4>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--text-secondary);">
                 <span>Raw Recruiter Score</span>
-                <span>83.1%</span>
+                <span style="color: var(--text-primary); font-weight: 600;">83.1%</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.3rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.6rem; color: var(--text-secondary);">
                 <span>Anonymized Recruiter Score</span>
-                <span>85.4%</span>
+                <span style="color: var(--text-primary); font-weight: 600;">85.4%</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; color: var(--accent-rose);">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--accent-emerald); padding-top: 0.6rem; border-top: 1px solid var(--border-glass);">
                 <span>Screening Fairness Delta</span>
                 <span>-2.3% (Equalizing)</span>
               </div>
@@ -163,7 +210,9 @@
           
           <div class="kanban-column" id="col-matched" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'matched')">
             <div class="column-header">
-              <span class="column-title"><i class="fa-solid fa-compress" style="color: var(--primary-glow);"></i> Parsed & Matched</span>
+              <span class="column-title">
+                <i class="fa-solid fa-compress" style="color: var(--primary-glow);"></i> Parsed & Matched
+              </span>
               <span class="column-badge" id="badge-matched">0</span>
             </div>
             <div class="kanban-cards" id="cards-matched"></div>
@@ -171,7 +220,9 @@
           
           <div class="kanban-column" id="col-scheduled" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'scheduled')">
             <div class="column-header">
-              <span class="column-title"><i class="fa-solid fa-clock" style="color: var(--accent-purple);"></i> Queue Scheduled</span>
+              <span class="column-title">
+                <i class="fa-solid fa-clock" style="color: var(--accent-purple);"></i> Queue Scheduled
+              </span>
               <span class="column-badge" id="badge-scheduled">0</span>
             </div>
             <div class="kanban-cards" id="cards-scheduled"></div>
@@ -179,7 +230,9 @@
           
           <div class="kanban-column" id="col-applied" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'applied')">
             <div class="column-header">
-              <span class="column-title"><i class="fa-solid fa-plane-departure" style="color: var(--secondary-glow);"></i> Applied</span>
+              <span class="column-title">
+                <i class="fa-solid fa-plane-departure" style="color: var(--secondary-glow);"></i> Applied
+              </span>
               <span class="column-badge" id="badge-applied">0</span>
             </div>
             <div class="kanban-cards" id="cards-applied"></div>
@@ -187,7 +240,9 @@
           
           <div class="kanban-column" id="col-replied" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'got reply')">
             <div class="column-header">
-              <span class="column-title"><i class="fa-solid fa-envelope-open-text" style="color: var(--accent-emerald);"></i> Got Reply</span>
+              <span class="column-title">
+                <i class="fa-solid fa-envelope-open-text" style="color: var(--accent-emerald);"></i> Got Reply
+              </span>
               <span class="column-badge" id="badge-replied">0</span>
             </div>
             <div class="kanban-cards" id="cards-replied"></div>
@@ -202,26 +257,34 @@
           
           <!-- FORM PANEL -->
           <div class="glass-panel matcher-panel">
-            <h3 style="font-size: 1.25rem; color: #fff; margin-bottom: 0.5rem;"><i class="fa-solid fa-file-invoice"></i> Multi-Agent Matching Pipeline</h3>
+            <div style="display: flex; align-items: center; gap: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-glow); font-size: 1.2rem;">
+                <i class="fa-solid fa-file-shield"></i>
+              </div>
+              <div>
+                <h3 style="font-size: 1.2rem; color: var(--text-primary);">Multi-Agent Matching Pipeline</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">4-Stage sequential RAG alignment & resume optimization</p>
+              </div>
+            </div>
             
             <div class="form-group">
               <label>Resume Source Input</label>
               <div style="display: flex; gap: 1rem; align-items: center;">
                 <input type="file" id="resume-file" style="display:none;" onchange="handleResumeUpload(event)">
-                <button class="custom-button" onclick="document.getElementById('resume-file').click()" style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); font-size: 0.88rem; padding: 0.7rem 1.2rem; box-shadow: none;">
-                  <i class="fa-solid fa-upload"></i> Upload PDF/DOCX
+                <button class="custom-button secondary" onclick="document.getElementById('resume-file').click()" style="font-size: 0.88rem; padding: 0.75rem 1.4rem;">
+                  <i class="fa-solid fa-file-arrow-up"></i> Upload PDF/DOCX
                 </button>
-                <span id="file-upload-status" style="font-size: 0.85rem; color: var(--text-secondary);">No file uploaded</span>
+                <span id="file-upload-status" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">No file uploaded</span>
               </div>
-              <textarea class="form-control" id="resume-text" placeholder="Or paste raw resume text content directly..."></textarea>
+              <textarea class="form-control" id="resume-text" placeholder="Or paste raw resume text content directly here..."></textarea>
             </div>
 
             <div class="form-group">
-              <label>Target Career Page URL (Ghost job checked)</label>
+              <label>Target Career Page URL (Ghost job verified)</label>
               <div style="display: flex; gap: 0.8rem;">
                 <input type="text" class="form-control" id="jd-url" placeholder="https://careers.google.com/jobs/machine-learning..." style="flex: 1;">
-                <button class="custom-button" onclick="triggerJobScraping()" style="padding: 0.7rem 1.2rem; font-size: 0.88rem; background: var(--bg-card); border: 1px solid var(--border-glass); box-shadow: none;">
-                  Scrape
+                <button class="custom-button secondary" onclick="triggerJobScraping()" style="padding: 0.75rem 1.4rem; font-size: 0.88rem;">
+                  <i class="fa-solid fa-spider"></i> Scrape
                 </button>
               </div>
             </div>
@@ -229,97 +292,142 @@
             <div class="form-group">
               <label>Company & Role Metadata</label>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <input type="text" class="form-control" id="jd-company" placeholder="e.g. scale AI">
-                <input type="text" class="form-control" id="jd-role" placeholder="e.g. Prompt Engineer">
+                <input type="text" class="form-control" id="jd-company" placeholder="e.g. Google / Scale AI">
+                <input type="text" class="form-control" id="jd-role" placeholder="e.g. Senior Machine Learning Engineer">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: -0.2rem; margin-bottom: 0.5rem;">
+              <button class="custom-button secondary" type="button" onclick="triggerTop10CompanyScrape()" style="width: 100%; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.08); padding: 0.85rem; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem;">
+                <i class="fa-solid fa-building-circle-check" style="color: var(--primary-glow);"></i> Scan Resume & Scrape Top 10 Tech Companies
+              </button>
+              
+              <!-- TOP 10 SCRAPED JOBS CONTAINER -->
+              <div id="top10-jobs-container" style="display: none; margin-top: 1.2rem; background: var(--bg-input); border: 1px solid var(--border-glass); border-radius: 14px; padding: 1.2rem; max-height: 380px; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.6rem;">
+                  <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);"><i class="fa-solid fa-list-check" style="color: var(--accent-emerald);"></i> Top 10 Scraped Matching Roles</span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono);" id="top10-status-text">Sorted by Alignment</span>
+                </div>
+                <div id="top10-jobs-list" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
               </div>
             </div>
 
             <div class="form-group">
-              <label>Job Description Body</label>
+              <label>Job Description Requirements Body</label>
               <textarea class="form-control" id="jd-text" placeholder="Paste JD requirements block or scrape via URL above..." style="min-height: 150px;"></textarea>
             </div>
 
-            <button class="custom-button" onclick="triggerMatchingPipeline()">
-              <i class="fa-solid fa-bolt"></i> Run Multi-Agent Matching Pipeline
+            <button class="custom-button" onclick="triggerMatchingPipeline()" style="margin-top: 0.5rem; width: 100%; padding: 1.1rem;">
+              <i class="fa-solid fa-bolt"></i> Execute 4-Stage Matching Pipeline
             </button>
           </div>
 
           <!-- RESULTS PANEL -->
           <div class="glass-panel results-card" id="results-panel">
-            <h3 style="font-size: 1.25rem; color: #fff; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.8rem; margin-bottom: 0.5rem;">Pipeline Diagnostics</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+              <h3 style="font-size: 1.2rem; color: var(--text-primary);">Pipeline Diagnostic Readout</h3>
+              <span class="match-tag" style="background: var(--bg-pill); color: var(--text-secondary); border-color: var(--border-glass);">SDWM Evaluator</span>
+            </div>
             
-            <div style="text-align: center; color: var(--text-secondary); margin-top: 5rem;" id="results-placeholder">
-              <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 3rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--primary-glow), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
-              <p>Upload a resume and paste target job details to execute the sequential 4-agent deep RAG matching engine.</p>
+            <div style="text-align: center; color: var(--text-secondary); margin-top: 6rem; padding: 2rem;" id="results-placeholder">
+              <div style="width: 80px; height: 80px; border-radius: 20px; background: rgba(56, 189, 248, 0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; border: 1px solid rgba(56, 189, 248, 0.2);">
+                <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 2.2rem; color: var(--primary-glow);"></i>
+              </div>
+              <h4 style="color: var(--text-primary); font-size: 1.1rem; margin-bottom: 0.5rem;">Ready to Evaluate</h4>
+              <p style="max-width: 400px; margin: 0 auto; font-size: 0.9rem; line-height: 1.5;">Upload a resume and provide target job details to execute the sequential 4-agent deep RAG matching engine.</p>
             </div>
 
             <!-- DYNAMIC RESULT CONTENTS -->
-            <div id="results-content" style="display: none; flex-direction: column; gap: 1.5rem;">
+            <div id="results-content" style="display: none; flex-direction: column; gap: 1.8rem;">
               <div class="score-display">
                 <div class="score-circle" id="result-score-circle">88%</div>
                 <div>
-                  <h4 style="font-size: 1.15rem; color: #fff; margin-bottom: 0.2rem;" id="result-company-role">Google - ML Engineer</h4>
-                  <p style="color: var(--text-secondary); font-size: 0.88rem;" id="result-alignment-verdict">Exceptional Alignment (Recos Similarity)</p>
+                  <h4 style="font-size: 1.3rem; color: var(--text-primary); margin-bottom: 0.3rem;" id="result-company-role">Google - ML Engineer</h4>
+                  <p style="color: var(--text-secondary); font-size: 0.9rem;" id="result-alignment-verdict">Exceptional Alignment (Recos Similarity)</p>
                 </div>
               </div>
 
               <!-- DUAL-ATS SCREENING DELTA -->
-              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 12px;" id="result-bias-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-                  <span style="font-size: 0.9rem; font-weight: 600; color: #fff;"><i class="fa-solid fa-scale-balanced" style="color: var(--accent-purple);"></i> Bias-ATS Fairness Delta</span>
-                  <span class="match-tag" id="result-bias-status" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple);">Unbiased Screening</span>
+              <div style="background: var(--bg-pill); border: 1px solid var(--border-glass); padding: 1.4rem; border-radius: 16px;" id="result-bias-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);"><i class="fa-solid fa-scale-balanced" style="color: var(--accent-purple); margin-right: 0.5rem;"></i> Bias-ATS Fairness Delta</span>
+                  <span class="match-tag" id="result-bias-status" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border-color: rgba(168, 85, 247, 0.3);">Unbiased Screening</span>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; gap: 1rem; font-size: 0.82rem;">
-                  <div>
-                    <div style="color: var(--text-secondary);">Raw Resume Score</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #fff;" id="result-bias-raw">0%</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; gap: 1rem; font-size: 0.85rem;">
+                  <div style="background: var(--bg-pill); padding: 0.8rem; border-radius: 10px;">
+                    <div style="color: var(--text-secondary); font-size: 0.78rem; margin-bottom: 0.3rem;">Raw Resume Score</div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); font-family: var(--font-heading);" id="result-bias-raw">0%</div>
                   </div>
-                  <div>
-                    <div style="color: var(--text-secondary);">Anonymized Score</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #fff;" id="result-bias-anon">0%</div>
+                  <div style="background: var(--bg-pill); padding: 0.8rem; border-radius: 10px;">
+                    <div style="color: var(--text-secondary); font-size: 0.78rem; margin-bottom: 0.3rem;">Anonymized Score</div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); font-family: var(--font-heading);" id="result-bias-anon">0%</div>
                   </div>
-                  <div>
-                    <div style="color: var(--text-secondary);">Fairness Delta</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-rose);" id="result-bias-delta">0.0</div>
+                  <div style="background: var(--bg-pill); padding: 0.8rem; border-radius: 10px;">
+                    <div style="color: var(--text-secondary); font-size: 0.78rem; margin-bottom: 0.3rem;">Fairness Delta</div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent-emerald); font-family: var(--font-heading);" id="result-bias-delta">0.0</div>
                   </div>
                 </div>
               </div>
 
               <!-- GHOST JOB WARNINGS -->
-              <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15); padding: 1rem; border-radius: 10px; display: none;" id="result-ghost-card">
-                <h4 style="color: var(--accent-rose); font-size: 0.88rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.6rem;">
+              <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); padding: 1.2rem; border-radius: 14px; display: none;" id="result-ghost-card">
+                <h4 style="color: var(--accent-rose); font-size: 0.95rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.6rem;">
                   <i class="fa-solid fa-ghost"></i> Ghost-Job Risk Warning (<span id="result-ghost-score">0%</span>)
                 </h4>
-                <p style="font-size: 0.78rem; color: var(--text-secondary);" id="result-ghost-indicator">Listing active >30 days with moderate layoff trend indices.</p>
+                <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.5;" id="result-ghost-indicator">Listing active >30 days with moderate layoff trend indices.</p>
               </div>
 
               <!-- DECOMPOSED SKILLS -->
               <div>
-                <h4 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem;">Skill-Decomposed Alignments (SDWM)</h4>
+                <h4 style="font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.8rem; font-weight: 700;">Skill-Decomposed Alignments (SDWM)</h4>
                 <div class="skills-badge-container" id="result-skills-container"></div>
               </div>
 
               <!-- COUNTERFACTUAL MATCH EXPLANATIONS -->
               <div>
-                <h4 style="font-size: 0.9rem; color: #fff; margin-bottom: 0.6rem;"><i class="fa-solid fa-graduation-cap"></i> Skill Gap Learning Paths</h4>
+                <h4 style="font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.8rem; font-weight: 700;"><i class="fa-solid fa-graduation-cap" style="color: var(--primary-glow); margin-right: 0.5rem;"></i> Skill Gap Learning Paths</h4>
                 <div class="resources-grid" id="result-resources"></div>
               </div>
 
               <!-- COVER LETTER PITCH PREVIEW -->
-              <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--primary-glow);"><i class="fa-solid fa-file-signature"></i> Dynamic Cover Letter Preview</span>
-                  <span style="font-size: 0.72rem; color: var(--text-secondary);">AFLOW Opt: <strong id="result-aflow-name">Aggressive</strong> | DNA: <strong id="result-dna-name">Metrics</strong></span>
+              <div style="background: var(--bg-input); border: 1px solid var(--border-glass); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.8rem;">
+                  <span style="font-size: 0.92rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-file-signature" style="color: var(--primary-glow);"></i> Dynamic Cover Letter Preview
+                  </span>
+                  <span style="font-size: 0.78rem; color: var(--text-secondary);">AFLOW Opt: <strong id="result-aflow-name" style="color: var(--primary-glow);">Aggressive</strong> | DNA: <strong id="result-dna-name" style="color: var(--secondary-glow);">Metrics</strong></span>
                 </div>
-                <textarea class="form-control" id="result-cover-letter" style="min-height: 150px; font-size: 0.85rem; background: transparent; border: none; padding: 0;" readonly></textarea>
-                <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-                  <button class="custom-button" id="btn-schedule-app" style="flex: 1; padding: 0.6rem 1.2rem; font-size: 0.85rem; background: linear-gradient(135deg, var(--accent-purple), var(--accent-purple));">
-                    <i class="fa-solid fa-calendar-check"></i> Chrono Schedule Queue
+                <textarea class="form-control" id="result-cover-letter" style="min-height: 180px; font-size: 0.9rem; background: transparent; border: none; padding: 0.5rem 0; line-height: 1.6;" readonly></textarea>
+                <div style="display: flex; gap: 1rem; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border-glass);">
+                  <button class="custom-button secondary" id="btn-schedule-app" style="flex: 1; padding: 0.8rem 1.2rem; font-size: 0.88rem; justify-content: center; border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.1); color: var(--text-primary);">
+                    <i class="fa-solid fa-calendar-check" style="color: var(--accent-purple);"></i> Chrono Schedule Queue
                   </button>
-                  <button class="custom-button" id="btn-apply-app" style="flex: 1; padding: 0.6rem 1.2rem; font-size: 0.85rem;">
+                  <button class="custom-button" id="btn-apply-app" style="flex: 1; padding: 0.8rem 1.2rem; font-size: 0.88rem; justify-content: center;">
                     <i class="fa-solid fa-paper-plane"></i> Apply Instantly
                   </button>
                 </div>
+              </div>
+
+              <!-- AI-TAILORED RESUME GENERATOR CARD -->
+              <div style="background: var(--bg-input); border: 1px solid var(--border-glass); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.8rem; flex-wrap: wrap; gap: 0.8rem;">
+                  <div>
+                    <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                      <i class="fa-solid fa-file-user" style="color: var(--accent-emerald);"></i> AI-Tailored Resume Generator (Job-Optimized)
+                    </span>
+                    <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">Customized in your original resume structure with target job competencies injected.</p>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span class="match-tag" id="result-tailored-status" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.3);">ATS Aligned: Core Injected</span>
+                    <button class="custom-button secondary" onclick="copyTailoredResume()" style="padding: 0.4rem 0.85rem; font-size: 0.78rem; border-radius: 8px;">
+                      <i class="fa-solid fa-copy"></i> Copy
+                    </button>
+                    <button class="custom-button" onclick="downloadTailoredResumePDF()" style="padding: 0.4rem 0.85rem; font-size: 0.78rem; border-radius: 8px; background: var(--primary-glow); color: #fff; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
+                      <i class="fa-solid fa-file-pdf"></i> Download (.PDF)
+                    </button>
+                  </div>
+                </div>
+                <textarea class="form-control" id="result-tailored-resume" style="min-height: 280px; font-size: 0.88rem; font-family: var(--font-mono, monospace); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem; line-height: 1.5; color: #e2e8f0;" placeholder="Generating tailored resume..."></textarea>
               </div>
 
             </div>
@@ -331,38 +439,55 @@
 
       <!-- 4. TAB: CHRONO QUEUE TIMELINE -->
       <div id="tab-scheduler" class="tab-content">
-        <div class="glass-panel" style="padding: 2rem;">
-          <h3 style="font-size: 1.25rem; color: #fff; margin-bottom: 0.5rem;"><i class="fa-solid fa-clock"></i> Scheduled Application Submissions</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.8rem;">
-            Optimal midweek chronological time-alignment scheduler slots (Innovation A) designed to bypass candidate filtering systems automatically.
-          </p>
+        <div class="glass-panel" style="padding: 2.5rem;">
+          <div style="border-bottom: 1px solid var(--border-glass); padding-bottom: 1.2rem; margin-bottom: 1.8rem;">
+            <h3 style="font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.6rem;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary-glow);"></i> Scheduled Application Submissions
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">
+              Optimal midweek chronological time-alignment scheduler slots designed to bypass automated candidate filtering systems.
+            </p>
+          </div>
 
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-            <thead>
-              <tr style="border-bottom: 1px solid var(--border-glass); color: var(--text-secondary);">
-                <th style="padding: 1rem;">ID</th>
-                <th style="padding: 1rem;">Company</th>
-                <th style="padding: 1rem;">Role</th>
-                <th style="padding: 1rem;">Target Send Window (Local)</th>
-                <th style="padding: 1rem;">Optimal Timezone</th>
-                <th style="padding: 1rem;">Status</th>
-                <th style="padding: 1rem; text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="scheduler-table-body">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="padding: 1.2rem; text-align: left;">ID</th>
+                  <th style="padding: 1.2rem; text-align: left;">Company</th>
+                  <th style="padding: 1.2rem; text-align: left;">Role</th>
+                  <th style="padding: 1.2rem; text-align: left;">Target Send Window (Local)</th>
+                  <th style="padding: 1.2rem; text-align: left;">Optimal Timezone</th>
+                  <th style="padding: 1.2rem; text-align: left;">Status</th>
+                  <th style="padding: 1.2rem; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="scheduler-table-body">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- 5. TAB: ROLE MOBILITY KNOWLEDGE GRAPH -->
       <div id="tab-graph" class="tab-content">
-        <div class="glass-panel" style="padding: 2rem;">
-          <h3 style="font-size: 1.25rem; color: #fff; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-nodes"></i> Career Mobility Trajectory Graph</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.8rem;">
-            Innovation 5: Aggregates real-world co-occurrences of role-to-role transitions and skill-to-role mappings, showing career trajectory steps.
-          </p>
+        <div class="glass-panel" style="padding: 2.5rem;">
+          <div style="border-bottom: 1px solid var(--border-glass); padding-bottom: 1.2rem; margin-bottom: 1.8rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h3 style="font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-diagram-project" style="color: var(--secondary-glow);"></i> Career Mobility Trajectory Graph
+              </h3>
+              <p style="color: var(--text-secondary); font-size: 0.95rem;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--primary-glow); margin-right: 4px;"></i> <strong>Hover over any role or skill</strong> to isolate its direct connections and dim background noise.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; background: rgba(0, 0, 0, 0.3); padding: 0.4rem; border-radius: 14px; border: 1px solid var(--border-glass);">
+              <button class="graph-filter-btn" id="filter-all" onclick="filterGraph('all')" style="padding: 0.45rem 1rem; border-radius: 10px; border: none; background: var(--primary-glow); color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">All Trajectories</button>
+              <button class="graph-filter-btn" id="filter-role" onclick="filterGraph('role-to-role')" style="padding: 0.45rem 1rem; border-radius: 10px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease;"><i class="fa-solid fa-briefcase" style="margin-right: 4px;"></i> Role Paths Only</button>
+              <button class="graph-filter-btn" id="filter-skill" onclick="filterGraph('skill-to-role')" style="padding: 0.45rem 1rem; border-radius: 10px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease;"><i class="fa-solid fa-code" style="margin-right: 4px;"></i> Skill Prerequisites Only</button>
+            </div>
+          </div>
 
           <div class="graph-container" id="graph-container">
             <!-- Simulated interactive Nodes rendered via SVG/HTML positioning -->
@@ -372,42 +497,49 @@
 
       <!-- 6. TAB: ONLINE JOB CRAWLER & SEARCH -->
       <div id="tab-crawler" class="tab-content">
-        <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
-          <h3 style="font-size: 1.25rem; color: #fff; margin-bottom: 0.5rem;"><i class="fa-solid fa-spider" style="color: var(--primary-glow);"></i> Online Job Crawler & Multi-Match Engine</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.8rem;">
-            Enter search keywords to crawl online developer boards (e.g. WeWorkRemotely, live corporate gateways). The system will harvest job links, scrape JDs, and evaluate match percentages against your resume on-the-fly.
-          </p>
+        <div class="glass-panel" style="padding: 2.5rem; margin-bottom: 2rem;">
+          <div style="border-bottom: 1px solid var(--border-glass); padding-bottom: 1.2rem; margin-bottom: 2rem;">
+            <h3 style="font-size: 1.4rem; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.6rem;">
+              <i class="fa-solid fa-globe" style="color: var(--primary-glow);"></i> Online Job Crawler & Multi-Match Engine
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">
+              Enter keywords to crawl online developer directories (e.g., WeWorkRemotely, corporate gateways). Harvest job links, scrape JDs, and evaluate match ratios in real-time.
+            </p>
+          </div>
 
-          <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem;">
-            <div style="flex: 2; display: flex; flex-direction: column; gap: 0.5rem;">
-              <label style="font-size: 0.85rem; color: var(--text-secondary);">Job Search Keywords (e.g. React, Python SDE, Data Scientist)</label>
-              <input type="text" class="form-control" id="crawler-keywords" placeholder="e.g. Python SDE" style="margin-bottom: 0;">
+          <div style="display: flex; gap: 1.2rem; align-items: flex-end; margin-bottom: 2.5rem;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 0.6rem;">
+              <label style="font-size: 0.88rem; font-weight: 600; color: var(--text-secondary);">Job Search Keywords (e.g., Python Developer, Data Scientist)</label>
+              <input type="text" class="form-control" id="crawler-keywords" placeholder="e.g. Python SDE / AI Engineer" style="margin-bottom: 0; padding: 1rem 1.2rem;">
             </div>
-            <button class="custom-button" onclick="triggerOnlineCrawlerSearch()" style="padding: 0.75rem 2rem; font-size: 0.9rem; height: 46px;">
-              <i class="fa-solid fa-magnifying-glass"></i> Crawl & Match Jobs
+            <button class="custom-button" onclick="triggerOnlineCrawlerSearch()" style="padding: 1rem 2.2rem; font-size: 0.95rem; height: 50px;">
+              <i class="fa-solid fa-magnifying-glass"></i> Crawl & Evaluate
             </button>
           </div>
 
           <!-- SUMMARY COUNTERS -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; display: none;" id="crawler-stats-row">
-            <div style="background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-glass); text-align: center;">
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">Jobs Found Online</div>
-              <div style="font-size: 1.6rem; font-weight: 700; color: var(--primary-glow);" id="crawler-stat-found">0</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem; margin-bottom: 2.5rem; display: none;" id="crawler-stats-row">
+            <div style="background: var(--bg-pill); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-glass); text-align: center;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.4rem;">Jobs Found Online</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--primary-glow); font-family: var(--font-heading);" id="crawler-stat-found">0</div>
             </div>
-            <div style="background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-glass); text-align: center;">
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">Resume Matches (&ge;50%)</div>
-              <div style="font-size: 1.6rem; font-weight: 700; color: var(--accent-emerald);" id="crawler-stat-matched">0</div>
+            <div style="background: var(--bg-pill); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-glass); text-align: center;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.4rem;">Resume Matches (&ge;50%)</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--accent-emerald); font-family: var(--font-heading);" id="crawler-stat-matched">0</div>
             </div>
-            <div style="background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-glass); text-align: center;">
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">Crawl Success Status</div>
-              <div style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 0.4rem;" id="crawler-stat-status">Crawl Active</div>
+            <div style="background: var(--bg-pill); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-glass); text-align: center;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.4rem;">Crawl Success Status</div>
+              <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-top: 0.6rem;" id="crawler-stat-status">Crawl Active</div>
             </div>
           </div>
 
           <!-- DYNAMIC JOBS LIST -->
-          <div id="crawler-placeholder" style="text-align: center; color: var(--text-secondary); padding: 4rem 1rem;">
-            <i class="fa-solid fa-network-wired" style="font-size: 3rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--primary-glow), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
-            <p>Upload a resume first (in the RAG Matcher tab), then search keywords here to crawl, scrape and evaluate online listings in real-time.</p>
+          <div id="crawler-placeholder" style="text-align: center; color: var(--text-secondary); padding: 5rem 1rem;">
+            <div style="width: 80px; height: 80px; border-radius: 20px; background: rgba(56, 189, 248, 0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; border: 1px solid rgba(56, 189, 248, 0.2);">
+              <i class="fa-solid fa-network-wired" style="font-size: 2.2rem; color: var(--primary-glow);"></i>
+            </div>
+            <h4 style="color: var(--text-primary); font-size: 1.1rem; margin-bottom: 0.5rem;">Crawl Public Listings</h4>
+            <p style="max-width: 450px; margin: 0 auto; font-size: 0.9rem; line-height: 1.5;">Upload your resume in the RAG Matcher tab first, then search keywords here to crawl, scrape, and evaluate online developer jobs in real-time.</p>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="crawler-results-list"></div>
@@ -417,6 +549,47 @@
     </main>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=20260726"></script>
+
+  <!-- TAILORED RESUME MODAL -->
+  <div class="loading-overlay" id="resume-modal-overlay" style="display: none; z-index: 10000; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);">
+    <div class="glass-panel" style="width: 90%; max-width: 850px; max-height: 90vh; display: flex; flex-direction: column; padding: 2rem; border: 1px solid var(--border-glass); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); position: relative; overflow: hidden;">
+      
+      <!-- MODAL HEADER -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 1.2rem; margin-bottom: 1.2rem;">
+        <div style="display: flex; align-items: center; gap: 0.8rem;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-emerald); font-size: 1.3rem;">
+            <i class="fa-solid fa-file-user"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.35rem; color: var(--text-primary); margin: 0;" id="modal-resume-title">AI-Tailored Resume</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;" id="modal-resume-subtitle">Optimized in your original resume structure for ATS alignment</p>
+          </div>
+        </div>
+        <button onclick="closeTailoredResumeModal()" style="background: transparent; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; padding: 0.4rem; transition: 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-secondary)'"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- MODAL BODY -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.8rem;">
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;" id="modal-resume-skills">
+          <span class="match-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.3);">ATS Aligned: Core Competencies Injected</span>
+        </div>
+        <div style="display: flex; gap: 0.6rem;">
+          <button class="custom-button secondary" onclick="copyModalTailoredResume()" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">
+            <i class="fa-solid fa-copy"></i> Copy Text
+          </button>
+          <button class="custom-button" onclick="downloadModalTailoredResumePDF()" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px; background: var(--primary-glow); color: #fff; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
+            <i class="fa-solid fa-file-pdf"></i> Download (.PDF)
+          </button>
+        </div>
+      </div>
+
+      <textarea class="form-control" id="modal-tailored-textarea" style="flex: 1; min-height: 400px; font-size: 0.88rem; font-family: var(--font-mono, monospace); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1.2rem; line-height: 1.6; color: #f1f5f9; resize: none; overflow-y: auto;" placeholder="Generating tailored resume..."></textarea>
+      
+      <div style="display: flex; justify-content: flex-end; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border-glass);">
+        <button class="custom-button secondary" onclick="closeTailoredResumeModal()" style="padding: 0.6rem 1.4rem; font-size: 0.9rem;">Close</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

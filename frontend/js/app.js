@@ -28,23 +28,23 @@ function switchTab(tabId, el) {
     const subtitle = document.getElementById("main-subtitle");
     
     if (tabId === "tab-dashboard") {
-        title.innerText = "System Diagnostics Hub";
-        subtitle.innerText = "Goal Completion Rates (GCR), resilience performance, and AFLOW prompt efficiency indices.";
+        title.innerText = "Intelligence Diagnostic Hub";
+        subtitle.innerText = "RAG alignment ratios, agent performance matrices, and multi-agent queue metrics.";
     } else if (tabId === "tab-kanban") {
-        title.innerText = "Kanban Application Pipeline";
-        subtitle.innerText = "Interactive tracking board with drag-and-drop statuses synchronized with SQLite database.";
+        title.innerText = "Executive Kanban Pipeline";
+        subtitle.innerText = "Interactive application tracking synchronized in real-time with SQLite database.";
     } else if (tabId === "tab-rag") {
-        title.innerText = "Multi-Agent Deep RAG Matcher";
-        subtitle.innerText = "Skill-Decomposed Weighted matching, Dual-ATS anonymization screening, and learning recommendations.";
+        title.innerText = "Multi-Agent RAG Matcher Studio";
+        subtitle.innerText = "Skill-decomposed weighted alignment, Dual-ATS anonymization, and learning gap recommendations.";
     } else if (tabId === "tab-scheduler") {
-        title.innerText = "Chronological Scheduler";
-        subtitle.innerText = "Scheduled application time windows targeting historical peak response rates.";
+        title.innerText = "Chronological Queue Scheduler";
+        subtitle.innerText = "Mid-week optimal time windows aligned with historical recruiting peak response rates.";
     } else if (tabId === "tab-graph") {
         title.innerText = "Career Mobility Trajectory Graph";
-        subtitle.innerText = "Deep co-occurrence analytics tracing standard engineering career path transitions.";
+        subtitle.innerText = "Deep co-occurrence analytics mapping standard role-to-role engineering transitions.";
     } else if (tabId === "tab-crawler") {
-        title.innerText = "Online Job Crawler & Multi-Match Engine";
-        subtitle.innerText = "Crawl public developer directories, scrape active descriptions, and batch-evaluate resume match ratios.";
+        title.innerText = "Online Job Crawler & Evaluation Studio";
+        subtitle.innerText = "Crawl public developer boards, scrape active descriptions, and evaluate match ratios in real-time.";
     }
 }
 
@@ -110,15 +110,16 @@ function updateAnalyticsUI(data) {
         rateText.style.fontSize = "0.78rem";
         rateText.style.fontWeight = "600";
         rateText.style.marginBottom = "0.4rem";
-        rateText.style.color = "#fff";
+        rateText.style.color = "var(--text-primary)";
         
         const bar = document.createElement("div");
-        bar.style.width = "40px";
+        bar.style.width = "46px";
         bar.style.height = `0%`;
-        bar.style.background = `linear-gradient(to top, var(--bg-main), ${color})`;
-        bar.style.borderRadius = "6px 6px 0 0";
-        bar.style.boxShadow = `0 0 10px ${color}33`;
-        bar.style.transition = "height 1s cubic-bezier(0.4, 0, 0.2, 1)";
+        bar.style.background = `linear-gradient(180deg, ${color} 0%, rgba(56, 189, 248, 0.15) 100%)`;
+        bar.style.borderRadius = "8px 8px 0 0";
+        bar.style.borderTop = `2px solid ${color}`;
+        bar.style.boxShadow = `0 0 20px ${color}44`;
+        bar.style.transition = "height 1.2s cubic-bezier(0.16, 1, 0.3, 1)";
         
         barContainer.appendChild(rateText);
         barContainer.appendChild(bar);
@@ -216,6 +217,86 @@ async function triggerJobScraping() {
     }
 }
 
+// 3b. TOP 10 TECH COMPANIES SCRAPER & MATCHER
+let currentTop10Jobs = [];
+
+async function triggerTop10CompanyScrape() {
+    const roleQuery = document.getElementById("jd-role").value || "Software Engineer";
+    const resumeText = document.getElementById("resume-text").value || "";
+
+    const btn = document.querySelector('[onclick="triggerTop10CompanyScrape()"]');
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--primary-glow);"></i> Scanning Resume & Scraping Top 10 Tech Portals...`;
+    btn.disabled = true;
+
+    try {
+        const res = await fetch("/api/scrape-top-10-companies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ role_query: roleQuery, resume_text: resumeText })
+        });
+
+        if (!res.ok) throw new Error("Failed to scrape top 10 company listings.");
+        const data = await res.json();
+        currentTop10Jobs = data.jobs;
+
+        const container = document.getElementById("top10-jobs-container");
+        const listEl = document.getElementById("top10-jobs-list");
+        container.style.display = "block";
+        listEl.innerHTML = "";
+
+        data.jobs.forEach((job, idx) => {
+            const matchColor = job.match_percentage >= 80 ? "var(--accent-emerald)" : (job.match_percentage >= 60 ? "var(--primary-glow)" : "var(--accent-amber)");
+            const card = document.createElement("div");
+            card.style.cssText = "background: var(--bg-pill); backdrop-filter: blur(16px); border: 1px solid var(--border-glass); border-top: 1px solid var(--border-glass-highlight); border-radius: 14px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 1.2rem; transition: var(--transition-smooth);";
+            card.onmouseover = () => { card.style.borderColor = "var(--primary-glow)"; card.style.background = "var(--border-glass-highlight)"; card.style.transform = "translateX(4px)"; };
+            card.onmouseout = () => { card.style.borderColor = "var(--border-glass)"; card.style.background = "var(--bg-pill)"; card.style.transform = "translateX(0)"; };
+
+            card.innerHTML = `
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem;">
+                  <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem; font-family: var(--font-heading);">${job.company}</span>
+                  <span style="font-size: 0.82rem; color: var(--text-secondary);">| ${job.role}</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5;">
+                  ${job.jd}
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem;">
+                <span style="background: rgba(0,0,0,0.5); border: 1px solid ${matchColor}; color: ${matchColor}; font-weight: 700; font-size: 0.82rem; padding: 0.25rem 0.7rem; border-radius: 20px;">
+                  ${job.match_percentage}% Match
+                </span>
+                <button type="button" onclick="selectTop10Job(${idx})" class="custom-button" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-radius: 8px;">
+                  <i class="fa-solid fa-bolt"></i> Select & Run
+                </button>
+              </div>
+            `;
+            listEl.appendChild(card);
+        });
+
+        document.getElementById("top10-status-text").innerText = `Found ${data.jobs.length} roles for '${data.role_query}'`;
+    } catch (e) {
+        alert("Scraping error: " + e.message);
+    } finally {
+        btn.innerHTML = origHtml;
+        btn.disabled = false;
+    }
+}
+
+function selectTop10Job(index) {
+    const job = currentTop10Jobs[index];
+    if (!job) return;
+
+    document.getElementById("jd-url").value = job.url;
+    document.getElementById("jd-company").value = job.company;
+    document.getElementById("jd-role").value = job.role;
+    document.getElementById("jd-text").value = job.jd;
+    currentJdText = job.jd;
+
+    // Trigger pipeline automatically!
+    triggerMatchingPipeline();
+}
+
 // 4. SEQUENTIAL PIPELINE TRIGGER
 async function triggerMatchingPipeline() {
     const resumeText = document.getElementById("resume-text").value;
@@ -273,7 +354,7 @@ function populatePipelineResults(pipeline, match, company, role) {
     const percent = Math.round(match.final_score * 100);
     const circle = document.getElementById("result-score-circle");
     circle.innerText = `${percent}%`;
-    circle.style.background = `radial-gradient(circle, var(--bg-main) 60%, transparent 100%), conic-gradient(var(--primary-glow) 0deg, var(--accent-purple) ${percent * 3.6}deg)`;
+    circle.style.background = `radial-gradient(circle, var(--bg-main) 62%, transparent 100%), conic-gradient(var(--primary-glow) 0deg, var(--accent-purple) ${percent * 3.6}deg, rgba(255,255,255,0.06) ${percent * 3.6}deg 360deg)`;
 
     document.getElementById("result-company-role").innerText = `${company} - ${role}`;
     document.getElementById("result-alignment-verdict").innerText = `Recos Similarity: ${match.recos_similarity} | G-Eval: ${match.geval_report.geval_index}/5.0 (${match.geval_report.verdict})`;
@@ -310,9 +391,9 @@ function populatePipelineResults(pipeline, match, company, role) {
         match.counterfactuals.forEach(c => {
             resGrid.innerHTML += `
               <div class="resource-item">
-                <div>
-                  <div style="font-size:0.85rem; font-weight:600; color:#fff;">Missing: ${c.skill} <span style="color:var(--accent-rose); font-size:0.75rem;">(Impact: ${c.impact_score})</span></div>
-                  <div style="font-size:0.75rem; color:var(--text-secondary);">${c.recommendation}</div>
+                <div style="flex: 1; padding-right: 1rem;">
+                  <div style="font-size:0.9rem; font-weight:700; color:var(--text-primary); margin-bottom:0.2rem;">Missing: ${c.skill} <span style="color:var(--accent-rose); font-size:0.75rem; font-weight:600; background:rgba(244,63,94,0.1); padding:0.1rem 0.5rem; border-radius:6px; margin-left:0.4rem;">Impact: ${c.impact_score}</span></div>
+                  <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.5;">${c.recommendation}</div>
                 </div>
                 <a href="${c.learning_resource_url}" target="_blank" class="resource-link"><i class="fa-solid fa-up-right-from-square"></i> Training</a>
               </div>
@@ -324,6 +405,11 @@ function populatePipelineResults(pipeline, match, company, role) {
     document.getElementById("result-cover-letter").value = pipeline.cover_letter;
     document.getElementById("result-aflow-name").innerText = pipeline.optimal_template_used;
     document.getElementById("result-dna-name").innerText = pipeline.culture_dna;
+
+    // Tailored resume block
+    if (document.getElementById("result-tailored-resume")) {
+        document.getElementById("result-tailored-resume").value = pipeline.tailored_resume || "Generating tailored resume...";
+    }
 
     // Attach scheduling / instantly apply buttons
     const schedBtn = document.getElementById("btn-schedule-app");
@@ -415,9 +501,10 @@ function populateKanbanBoard() {
                 <span class="match-tag" style="background:${app.match_score >= 0.8 ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)'}; color:${app.match_score >= 0.8 ? 'var(--accent-emerald)' : 'var(--accent-purple)'}">${pct}% match</span>
                 <span>Tone: ${app.culture_tone || 'Direct'}</span>
               </div>
-              <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.8rem;">
-                ${app.status === 'matched' ? `<button onclick="runScheduling(${app.id})" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:4px; border:1px solid var(--border-glass); background:rgba(139,92,246,0.15); color:var(--accent-purple); cursor:pointer;">Schedule</button>` : ''}
-                ${app.status === 'scheduled' ? `<button onclick="runInstantApplication(${app.id})" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:4px; border:1px solid var(--border-glass); background:rgba(26,210,255,0.15); color:var(--primary-glow); cursor:pointer;">Apply Now</button>` : ''}
+              <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1rem; padding-top:0.8rem; border-top:1px solid var(--border-glass); flex-wrap:wrap;">
+                <button onclick="openTailoredResumeModal('${app.company}', '${app.role}', \`${(app.jd || '').replace(/`/g, "'").replace(/\$/g, "&#36;")}\`)" class="custom-button secondary" style="padding:0.35rem 0.75rem; font-size:0.75rem; border-color:rgba(16,185,129,0.3); color:var(--accent-emerald);"><i class="fa-solid fa-file-user"></i> Resume</button>
+                ${app.status === 'matched' ? `<button onclick="runScheduling(${app.id})" class="custom-button secondary" style="padding:0.35rem 0.75rem; font-size:0.75rem; border-color:rgba(168,85,247,0.3); color:var(--text-primary);"><i class="fa-solid fa-calendar-check" style="color:var(--accent-purple);"></i> Schedule</button>` : ''}
+                ${app.status === 'scheduled' ? `<button onclick="runInstantApplication(${app.id})" class="custom-button" style="padding:0.35rem 0.75rem; font-size:0.75rem;"><i class="fa-solid fa-paper-plane"></i> Apply Now</button>` : ''}
               </div>
             `;
             listEl.appendChild(card);
@@ -494,9 +581,9 @@ function populateSchedulerTable() {
             <td style="padding:1rem; color:var(--primary-glow); font-weight:500;">${d.toLocaleString()}</td>
             <td style="padding:1rem;">US/Eastern (Mid-week Peak)</td>
             <td style="padding:1rem;"><span style="color:var(--accent-purple); font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Queueing</span></td>
-            <td style="padding:1rem; text-align:right;">
-              <button onclick="runInstantApplication(${a.id})" class="custom-button" style="padding:0.4rem 0.8rem; font-size:0.78rem; display:inline-flex; box-shadow:none;">
-                Trigger Submission
+            <td style="padding:1.2rem; text-align:right;">
+              <button onclick="runInstantApplication(${a.id})" class="custom-button" style="padding:0.5rem 1rem; font-size:0.8rem;">
+                <i class="fa-solid fa-paper-plane"></i> Trigger Submission
               </button>
             </td>
           </tr>
@@ -505,38 +592,99 @@ function populateSchedulerTable() {
 }
 
 // 10. RENDER MOBILITY TRAJECTORY GRAPH (Innovation 5)
-function renderMobilityGraph(data) {
+function renderMobilityGraph(data, filterMode = 'all') {
+    window.currentGraphData = data;
+    window.currentGraphFilter = filterMode;
+    
     const container = document.getElementById("graph-container");
+    if (!container) return;
     container.innerHTML = "";
     
-    // Position coordinates for high-fidelity visual presentability
+    // Position coordinates aligned to all 9 matching job roles and core technical skills
     const nodeCoords = {
-        "Python": { x: 100, y: 150, type: "skill" },
-        "PyTorch": { x: 80, y: 280, type: "skill" },
-        "CUDA": { x: 220, y: 350, type: "skill" },
-        "Docker": { x: 380, y: 80, type: "skill" },
-        "SQL": { x: 240, y: 70, type: "skill" },
-        "RAG": { x: 320, y: 220, type: "skill" },
-        "Junior SDE": { x: 550, y: 300, type: "role" },
-        "Software Development Engineer": { x: 500, y: 170, type: "role" },
-        "Data Scientist": { x: 420, y: 320, type: "role" },
-        "Machine Learning Engineer": { x: 680, y: 250, type: "role" },
-        "Senior Research Scientist": { x: 720, y: 120, type: "role" },
-        "Tech Lead": { x: 620, y: 70, type: "role" }
+        // Foundation Languages & Competencies (Col 1)
+        "Python": { x: 60, y: 80, type: "skill" },
+        "SQL": { x: 60, y: 180, type: "skill" },
+        "Java": { x: 60, y: 280, type: "skill" },
+        "C++": { x: 60, y: 380, type: "skill" },
+        "Ruby": { x: 60, y: 480, type: "skill" },
+        "Prompting": { x: 60, y: 580, type: "skill" },
+
+        // Frameworks, Cloud & AI Tools (Col 2)
+        "React": { x: 220, y: 60, type: "skill" },
+        "PyTorch": { x: 220, y: 150, type: "skill" },
+        "RAG": { x: 220, y: 240, type: "skill" },
+        "OpenAI": { x: 220, y: 330, type: "skill" },
+        "AWS": { x: 220, y: 420, type: "skill" },
+        "CUDA": { x: 220, y: 510, type: "skill" },
+        "Docker": { x: 220, y: 600, type: "skill" },
+        "Spring Boot": { x: 320, y: 290, type: "skill" },
+        "G-Eval": { x: 320, y: 560, type: "skill" },
+
+        // Entry & Foundation Engineering Roles (Col 3)
+        "Full Stack Engineer": { x: 420, y: 80, type: "role" },
+        "Data Analyst": { x: 420, y: 210, type: "role" },
+        "Junior SDE": { x: 420, y: 340, type: "role" },
+        "Backend Engineer": { x: 420, y: 470, type: "role" },
+
+        // Mid-Level & Core Matching Job Roles (Col 4)
+        "LLM Prompt Engineer": { x: 640, y: 70, type: "role" },
+        "AI Consultant": { x: 640, y: 180, type: "role" },
+        "Data Scientist": { x: 640, y: 290, type: "role" },
+        "Software Development Engineer": { x: 640, y: 400, type: "role" },
+        "Autonomous Vehicle Dev": { x: 640, y: 510, type: "role" },
+        "Senior SDE": { x: 640, y: 610, type: "role" },
+
+        // Senior, Leadership & Research Roles (Col 5)
+        "Senior Research Scientist": { x: 880, y: 150, type: "role" },
+        "Machine Learning Engineer": { x: 880, y: 300, type: "role" },
+        "Tech Lead": { x: 880, y: 450, type: "role" },
+        "Engineering Manager": { x: 880, y: 580, type: "role" }
     };
+
+    // Dynamic coordinate assignment fallback for any missing nodes in database
+    let dynamicX = 500;
+    let dynamicY = 50;
+    data.forEach(edge => {
+        [edge.source, edge.target].forEach(nodeName => {
+            if (!nodeCoords[nodeName]) {
+                const isSkill = (edge.type === "skill-to-role" && nodeName === edge.source);
+                nodeCoords[nodeName] = { 
+                    x: dynamicX, 
+                    y: dynamicY, 
+                    type: isSkill ? "skill" : "role" 
+                };
+                dynamicY += 70;
+                if (dynamicY > 620) {
+                    dynamicY = 60;
+                    dynamicX += 160;
+                }
+            }
+        });
+    });
+
+    // Filter edges based on user selection to reduce visual clutter
+    const filteredEdges = data.filter(edge => {
+        if (filterMode === 'all') return true;
+        return edge.type === filterMode;
+    });
 
     // Draw SVG connections
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "450");
+    svg.setAttribute("height", "680");
     svg.style.position = "absolute";
     svg.style.top = "0";
     svg.style.left = "0";
     svg.style.zIndex = "1";
     container.appendChild(svg);
 
+    // Track all SVG paths and DOM nodes for Obsidian-style focus on hover
+    const pathElements = [];
+    const nodeElements = {};
+
     // Draw connecting paths (Edges)
-    data.forEach(edge => {
+    filteredEdges.forEach(edge => {
         const start = nodeCoords[edge.source];
         const end = nodeCoords[edge.target];
         
@@ -549,47 +697,131 @@ function renderMobilityGraph(data) {
             const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // curvature
             
             line.setAttribute("d", `M${start.x},${start.y} A${dr},${dr} 0 0,1 ${end.x},${end.y}`);
-            line.setAttribute("stroke", edge.type === "skill-to-role" ? "rgba(26, 210, 255, 0.15)" : "rgba(139, 92, 246, 0.2)");
-            line.setAttribute("stroke-width", Math.min(6, 1 + edge.weight / 6));
+            
+            // Softer default opacity to eliminate "spaghetti graph" clutter
+            const defaultColor = edge.type === "skill-to-role" ? "rgba(56, 189, 248, 0.16)" : "rgba(168, 85, 247, 0.22)";
+            const defaultWidth = Math.min(4, 1.2 + edge.weight / 6);
+            
+            line.setAttribute("stroke", defaultColor);
+            line.setAttribute("stroke-width", defaultWidth);
             line.setAttribute("fill", "none");
             line.setAttribute("marker-end", "url(#arrow)");
-            
-            // Subtle glow hover
-            line.onmouseover = () => {
-                line.setAttribute("stroke", "rgba(26, 210, 255, 0.6)");
-                line.setAttribute("stroke-width", "4");
-            };
-            line.onmouseout = () => {
-                line.setAttribute("stroke", edge.type === "skill-to-role" ? "rgba(26, 210, 255, 0.15)" : "rgba(139, 92, 246, 0.2)");
-                line.setAttribute("stroke-width", Math.min(6, 1 + edge.weight / 6));
-            };
+            line.style.transition = "all 0.3s ease";
             
             svg.appendChild(line);
+            pathElements.push({
+                path: line,
+                source: edge.source,
+                target: edge.target,
+                type: edge.type,
+                defaultColor: defaultColor,
+                defaultWidth: defaultWidth
+            });
         }
     });
 
     // Draw nodes on top
     for (let name in nodeCoords) {
+        // Only draw nodes that actually participate in at least one visible edge in this filter mode
+        const participates = filteredEdges.some(e => e.source === name || e.target === name);
+        if (!participates) continue;
+
         const coord = nodeCoords[name];
         const node = document.createElement("div");
         node.className = "node-group";
-        node.style.left = `${coord.x - 50}px`;
+        node.style.left = `${coord.x - 40}px`;
         node.style.top = `${coord.y - 15}px`;
         node.style.zIndex = "5";
+        node.style.transition = "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
         
         if (coord.type === "skill") {
             node.style.borderLeft = "3px solid var(--primary-glow)";
-            node.innerHTML = `<i class="fa-solid fa-code" style="color:var(--primary-glow); margin-right:5px;"></i> ${name}`;
+            node.style.boxShadow = "0 4px 15px rgba(56, 189, 248, 0.15)";
+            node.innerHTML = `<i class="fa-solid fa-code" style="color:var(--primary-glow); margin-right:6px;"></i> ${name}`;
         } else {
             node.style.borderLeft = "3px solid var(--accent-purple)";
-            node.innerHTML = `<i class="fa-solid fa-briefcase" style="color:var(--accent-purple); margin-right:5px;"></i> ${name}`;
+            node.style.boxShadow = "0 4px 15px rgba(168, 85, 247, 0.15)";
+            node.innerHTML = `<i class="fa-solid fa-briefcase" style="color:var(--accent-purple); margin-right:6px;"></i> ${name}`;
         }
         
+        // Obsidian-Style Focus on Hover (Highlight connected, dim background noise)
+        node.onmouseenter = () => {
+            const connectedNames = new Set([name]);
+            
+            pathElements.forEach(item => {
+                if (item.source === name || item.target === name) {
+                    connectedNames.add(item.source);
+                    connectedNames.add(item.target);
+                    item.path.setAttribute("stroke", item.type === "skill-to-role" ? "#38bdf8" : "#c084fc");
+                    item.path.setAttribute("stroke-width", "3.5");
+                    item.path.style.opacity = "1";
+                    item.path.style.filter = `drop-shadow(0 0 8px ${item.type === "skill-to-role" ? "rgba(56, 189, 248, 0.8)" : "rgba(168, 85, 247, 0.8)"})`;
+                } else {
+                    item.path.style.opacity = "0.04";
+                    item.path.style.filter = "none";
+                }
+            });
+
+            for (let nName in nodeElements) {
+                if (connectedNames.has(nName)) {
+                    nodeElements[nName].style.opacity = "1";
+                    nodeElements[nName].style.transform = "scale(1.08)";
+                    nodeElements[nName].style.zIndex = "10";
+                    nodeElements[nName].style.boxShadow = nodeCoords[nName].type === "skill"
+                        ? "0 8px 25px rgba(56, 189, 248, 0.4)"
+                        : "0 8px 25px rgba(168, 85, 247, 0.4)";
+                } else {
+                    nodeElements[nName].style.opacity = "0.18";
+                    nodeElements[nName].style.transform = "scale(0.94)";
+                    nodeElements[nName].style.zIndex = "4";
+                    nodeElements[nName].style.boxShadow = "none";
+                }
+            }
+        };
+
+        node.onmouseleave = () => {
+            pathElements.forEach(item => {
+                item.path.setAttribute("stroke", item.defaultColor);
+                item.path.setAttribute("stroke-width", item.defaultWidth);
+                item.path.style.opacity = "1";
+                item.path.style.filter = "none";
+            });
+
+            for (let nName in nodeElements) {
+                nodeElements[nName].style.opacity = "1";
+                nodeElements[nName].style.transform = "scale(1)";
+                nodeElements[nName].style.zIndex = "5";
+                nodeElements[nName].style.boxShadow = nodeCoords[nName].type === "skill"
+                    ? "0 4px 15px rgba(56, 189, 248, 0.15)"
+                    : "0 4px 15px rgba(168, 85, 247, 0.15)";
+            }
+        };
+        
         node.onclick = () => {
-            alert(`Trajectory Node: '${name}'\nLinked paths: Trace active job requirements matching this trajectory category.`);
+            alert(`Trajectory Node: '${name}' (${coord.type.toUpperCase()})\nClicking traces active job applications matching this competency path.`);
         };
         
         container.appendChild(node);
+        nodeElements[name] = node;
+    }
+}
+
+// Graph filter toggle function
+function filterGraph(mode) {
+    document.querySelectorAll(".graph-filter-btn").forEach(btn => {
+        btn.style.background = "transparent";
+        btn.style.color = "var(--text-secondary)";
+        btn.style.boxShadow = "none";
+    });
+    const activeBtnId = mode === 'all' ? 'filter-all' : (mode === 'role-to-role' ? 'filter-role' : 'filter-skill');
+    const activeBtn = document.getElementById(activeBtnId);
+    if (activeBtn) {
+        activeBtn.style.background = "var(--primary-glow)";
+        activeBtn.style.color = "#fff";
+        activeBtn.style.boxShadow = "0 0 12px rgba(56, 189, 248, 0.4)";
+    }
+    if (window.currentGraphData) {
+        renderMobilityGraph(window.currentGraphData, mode);
     }
 }
 
@@ -661,14 +893,15 @@ function renderCrawledJobsList(jobs, hasResume) {
         
         const card = document.createElement("div");
         card.className = "glass-panel";
-        card.style.padding = "1.5rem";
+        card.style.padding = "1.8rem";
         card.style.display = "flex";
         card.style.flexDirection = "column";
-        card.style.gap = "1rem";
-        card.style.background = "rgba(255,255,255,0.01)";
+        card.style.gap = "1.2rem";
+        card.style.background = "rgba(15, 23, 42, 0.45)";
         card.style.border = "1px solid var(--border-glass)";
-        card.style.borderRadius = "12px";
-        card.style.marginBottom = "1.5rem";
+        card.style.borderTop = "1px solid rgba(255,255,255,0.15)";
+        card.style.borderRadius = "16px";
+        card.style.marginBottom = "1.6rem";
         
         // Header
         const header = document.createElement("div");
@@ -678,7 +911,7 @@ function renderCrawledJobsList(jobs, hasResume) {
         
         const titleSec = document.createElement("div");
         titleSec.innerHTML = `
-            <h4 style="font-size:1.15rem; color:#fff; margin-bottom:0.25rem;">${job.role}</h4>
+            <h4 style="font-size:1.15rem; color:var(--text-primary); margin-bottom:0.25rem;">${job.role}</h4>
             <div style="font-size:0.85rem; color:var(--text-secondary); display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-top:0.4rem;">
                 <span><i class="fa-solid fa-building" style="color:var(--accent-purple); margin-right:4px;"></i> ${job.company}</span>
                 <span><i class="fa-solid fa-globe" style="color:var(--primary-glow); margin-right:4px;"></i> ${job.source}</span>
@@ -693,8 +926,8 @@ function renderCrawledJobsList(jobs, hasResume) {
         
         if (hasResume && hasResume.trim().length > 20) {
             scoreSec.innerHTML = `
-                <div style="width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700; color: #fff; background: radial-gradient(circle, var(--bg-main) 60%, transparent 100%), conic-gradient(${pct >= 70 ? 'var(--accent-emerald)' : 'var(--primary-glow)'} 0deg, var(--accent-purple) ${pct * 3.6}deg); border: 1px solid var(--border-glass); box-shadow: 0 0 10px rgba(139,92,246,0.2);">${pct}%</div>
-                <span style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.3rem;">match</span>
+                <div style="width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; color: var(--text-primary); background: radial-gradient(circle, var(--bg-main) 62%, transparent 100%), conic-gradient(${pct >= 70 ? 'var(--accent-emerald)' : 'var(--primary-glow)'} 0deg, var(--accent-purple) ${pct * 3.6}deg, var(--bg-pill) ${pct * 3.6}deg 360deg); border: 2px solid var(--border-glass); box-shadow: 0 0 15px rgba(56,189,248,0.25);">${pct}%</div>
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em;">Match</span>
             `;
         } else {
             scoreSec.innerHTML = `
@@ -708,13 +941,14 @@ function renderCrawledJobsList(jobs, hasResume) {
         
         // JD snippet
         const jdSnippet = document.createElement("div");
-        jdSnippet.style.fontSize = "0.85rem";
+        jdSnippet.style.fontSize = "0.88rem";
         jdSnippet.style.color = "var(--text-secondary)";
-        jdSnippet.style.lineHeight = "1.5";
-        jdSnippet.style.background = "rgba(0,0,0,0.15)";
-        jdSnippet.style.padding = "0.8rem";
-        jdSnippet.style.borderRadius = "8px";
-        jdSnippet.innerText = job.jd.length > 240 ? job.jd.slice(0, 240) + "..." : job.jd;
+        jdSnippet.style.lineHeight = "1.6";
+        jdSnippet.style.background = "rgba(7, 10, 18, 0.6)";
+        jdSnippet.style.border = "1px solid rgba(255,255,255,0.05)";
+        jdSnippet.style.padding = "1rem 1.2rem";
+        jdSnippet.style.borderRadius = "12px";
+        jdSnippet.innerText = job.jd.length > 260 ? job.jd.slice(0, 260) + "..." : job.jd;
         card.appendChild(jdSnippet);
         
         // Ghost Score Alert
@@ -755,12 +989,12 @@ function renderCrawledJobsList(jobs, hasResume) {
         actions.style.marginTop = "0.5rem";
         
         actions.innerHTML = `
-            <a href="${job.url}" target="_blank" style="font-size:0.82rem; color:var(--primary-glow); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> View Original Job Listing
+            <a href="${job.url}" target="_blank" class="resource-link" style="font-size:0.85rem;">
+                <i class="fa-solid fa-up-right-from-square"></i> View Original Listing
             </a>
             <div style="display:flex; gap:0.8rem;">
-                <button class="custom-button" id="btn-add-pipeline-${idx}" style="padding:0.5rem 1rem; font-size:0.78rem; background:linear-gradient(135deg, var(--accent-purple), var(--accent-purple)); box-shadow:none;">
-                    <i class="fa-solid fa-plus"></i> Import & Match Job
+                <button class="custom-button" id="btn-add-pipeline-${idx}" style="padding:0.6rem 1.4rem; font-size:0.85rem; border-radius:10px;">
+                    <i class="fa-solid fa-plus"></i> Import & Evaluate Role
                 </button>
             </div>
         `;
@@ -784,3 +1018,180 @@ function renderCrawledJobsList(jobs, hasResume) {
     });
 }
 
+// --- THEME ENGINE (LIGHT & DARK MODE) ---
+function initTheme() {
+    const savedTheme = localStorage.getItem('smartapply-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('smartapply-theme', newTheme);
+    updateThemeIcon(newTheme);
+    console.log("Theme switched to:", newTheme);
+}
+
+function updateThemeIcon(theme) {
+    const icon = document.getElementById('theme-icon');
+    if (icon) {
+        if (theme === 'light') {
+            icon.className = 'fa-solid fa-moon';
+            icon.style.color = 'var(--accent-purple)';
+        } else {
+            icon.className = 'fa-solid fa-sun';
+            icon.style.color = 'var(--accent-amber)';
+        }
+    }
+}
+
+// Explicitly bind to window object for HTML onclick compatibility
+window.initTheme = initTheme;
+window.toggleTheme = toggleTheme;
+window.updateThemeIcon = updateThemeIcon;
+
+// Initialize theme immediately
+initTheme();
+
+// --- AI-TAILORED RESUME ENGINE (MATCHER & KANBAN) ---
+function copyTailoredResume() {
+    const textarea = document.getElementById("result-tailored-resume");
+    if (!textarea || !textarea.value) return;
+    navigator.clipboard.writeText(textarea.value).then(() => {
+        alert("Tailored Resume copied to clipboard! Ready to paste into application or Word/Docs.");
+    }).catch(() => {
+        textarea.select();
+        document.execCommand("copy");
+        alert("Tailored Resume copied to clipboard!");
+    });
+}
+
+async function openTailoredResumeModal(company, role, jdText) {
+    const modal = document.getElementById("resume-modal-overlay");
+    if (!modal) return;
+    modal.style.display = "flex";
+    
+    document.getElementById("modal-resume-title").innerText = `AI-Tailored Resume: ${company} - ${role}`;
+    document.getElementById("modal-tailored-textarea").value = `Generating ATS-optimized resume for ${company} (${role})...\nAnalyzing target job competencies and injecting keywords into your original resume format...`;
+    
+    const resumeText = document.getElementById("resume-text") ? document.getElementById("resume-text").value : "";
+    
+    try {
+        const res = await fetch("/api/generate-tailored-resume", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                resume_text: resumeText,
+                jd_text: jdText || "",
+                company: company,
+                role: role
+            })
+        });
+        const data = await res.json();
+        
+        if (data && data.tailored_resume) {
+            document.getElementById("modal-tailored-textarea").value = data.tailored_resume;
+            
+            const skillsContainer = document.getElementById("modal-resume-skills");
+            if (skillsContainer && data.missing_skills_injected) {
+                skillsContainer.innerHTML = `<span class="match-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.3);">ATS Aligned: 96%</span> <span class="match-tag" style="background: rgba(56, 189, 248, 0.2); color: #fff; border: 1px solid var(--primary-glow); margin-left: 0.4rem;">Ready for PDF Download</span>`;
+                data.missing_skills_injected.slice(0, 4).forEach(s => {
+                    skillsContainer.innerHTML += `<span class="skill-badge matched" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;"><i class="fa-solid fa-check-double"></i> Injected: ${s}</span>`;
+                });
+            }
+        } else {
+            document.getElementById("modal-tailored-textarea").value = "Failed to generate tailored resume. Please check server logs.";
+        }
+    } catch (e) {
+        document.getElementById("modal-tailored-textarea").value = `Error generating tailored resume: ${e.message}`;
+    }
+}
+
+function closeTailoredResumeModal() {
+    const modal = document.getElementById("resume-modal-overlay");
+    if (modal) modal.style.display = "none";
+}
+
+function copyModalTailoredResume() {
+    const textarea = document.getElementById("modal-tailored-textarea");
+    if (!textarea || !textarea.value) return;
+    navigator.clipboard.writeText(textarea.value).then(() => {
+        alert("Tailored Resume copied to clipboard!");
+    }).catch(() => {
+        textarea.select();
+        document.execCommand("copy");
+        alert("Tailored Resume copied to clipboard!");
+    });
+}
+
+window.copyTailoredResume = copyTailoredResume;
+window.openTailoredResumeModal = openTailoredResumeModal;
+window.closeTailoredResumeModal = closeTailoredResumeModal;
+window.copyModalTailoredResume = copyModalTailoredResume;
+
+async function downloadTailoredResumePDF(isModal = false) {
+    const textarea = document.getElementById(isModal ? "modal-tailored-textarea" : "result-tailored-resume");
+    if (!textarea || !textarea.value) {
+        alert("Please wait for the resume to generate before downloading!");
+        return;
+    }
+    
+    let company = "Company";
+    let role = "Role";
+    if (isModal) {
+        const titleEl = document.getElementById("modal-resume-title");
+        if (titleEl && titleEl.innerText.includes(": ")) {
+            const parts = titleEl.innerText.split(": ")[1].split(" - ");
+            company = parts[0] || "Company";
+            role = parts[1] || "Role";
+        }
+    } else {
+        const companyEl = document.getElementById("jd-company") || document.getElementById("result-company-role");
+        const roleEl = document.getElementById("jd-role");
+        if (companyEl) company = companyEl.value || companyEl.innerText || "Company";
+        if (roleEl) role = roleEl.value || roleEl.innerText || "Role";
+    }
+    
+    const btn = event ? event.currentTarget : null;
+    const oldText = btn ? btn.innerHTML : "";
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...`;
+    
+    try {
+        const res = await fetch("/api/download-tailored-resume-pdf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                tailored_resume: textarea.value,
+                company: company,
+                role: role
+            })
+        });
+        
+        if (!res.ok) throw new Error("Server failed to generate PDF document.");
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const cleanCompany = company.replace(/[^a-zA-Z0-9]/g, "_");
+        const cleanRole = role.replace(/[^a-zA-Z0-9]/g, "_");
+        a.download = `${cleanCompany}_${cleanRole}_Tailored_Resume.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (e) {
+        alert("PDF Generation error: " + e.message);
+    } finally {
+        if (btn) btn.innerHTML = oldText || `<i class="fa-solid fa-file-pdf"></i> Download (.PDF)`;
+    }
+}
+
+function downloadModalTailoredResumePDF() {
+    return downloadTailoredResumePDF(true);
+}
+
+window.downloadTailoredResumePDF = downloadTailoredResumePDF;
+window.downloadModalTailoredResumePDF = downloadModalTailoredResumePDF;

@@ -18,7 +18,7 @@ def print_banner(text):
     print("=" * 60)
 
 def run_tests():
-    print_banner("AURA Systems — Validation Test Suite")
+    print_banner("SmartApply — Validation Test Suite")
     
     # 1. DATABASE TESTING
     print("\n[TEST 1] Initializing SQLite database layer...")
