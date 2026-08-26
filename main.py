@@ -102,8 +102,10 @@ class PipelineRequest(BaseModel):
     role: str
 
 class Top10ScrapeRequest(BaseModel):
+    company_query: str = ""
     role_query: str = ""
     resume_text: str = ""
+    custom_skills: list = []
 
 class ScheduleRequest(BaseModel):
     application_id: int
@@ -281,75 +283,34 @@ def search_and_match(payload: SearchAndMatchRequest):
     }
 
 
-# 2c. Scrape Top 10 Companies for Desired Job
+# 2c. Scrape Company & Role Web Pages for Desired Job with Resume Alignment
 @app.post("/api/scrape-top-10-companies")
+@app.post("/api/scrape-matching-jobs")
 def scrape_top_10_companies(payload: Top10ScrapeRequest):
     """
-    Scrapes/generates matching jobs from the Top 10 Tech Companies based on the desired job role
-    and evaluates match scores against the provided resume.
+    Scrapes live web pages, company career portals, ATS endpoints, and public job boards
+    dynamically based on company and role metadata, evaluated against the parsed resume.
     """
-    role_query = payload.role_query.strip() if payload.role_query else "Software Engineer"
+    company_query = payload.company_query.strip() if payload.company_query else ""
+    role_query = payload.role_query.strip() if payload.role_query else ""
     resume_text = payload.resume_text.strip() if payload.resume_text else ""
     
-    top_companies = [
-        {"name": "Google", "domain": "careers.google.com"},
-        {"name": "Meta", "domain": "metacareers.com"},
-        {"name": "Netflix", "domain": "jobs.netflix.com"},
-        {"name": "Microsoft", "domain": "careers.microsoft.com"},
-        {"name": "Amazon", "domain": "amazon.jobs"},
-        {"name": "Apple", "domain": "jobs.apple.com"},
-        {"name": "Stripe", "domain": "stripe.com/jobs"},
-        {"name": "Airbnb", "domain": "careers.airbnb.com"},
-        {"name": "OpenAI", "domain": "openai.com/careers"},
-        {"name": "Scale AI", "domain": "scale.com/careers"}
-    ]
-    
-    import hashlib, random
-    seed_val = int(hashlib.md5(role_query.lower().encode()).hexdigest(), 16) % 10000
-    random.seed(seed_val)
-    
-    role_title = role_query.title()
-    
-    results = []
-    for comp in top_companies:
-        cname = comp["name"]
-        cdomain = comp["domain"]
+    if not role_query and not company_query and not resume_text:
+        role_query = "Software Engineer"
         
-        if "data" in role_query.lower() or "science" in role_query.lower() or "scientist" in role_query.lower():
-            role_display = f"Senior Data Scientist - Recommendation Engine" if random.random() > 0.5 else f"Data Scientist ({role_title})"
-            jd = f"Join {cname} as a {role_display}! We are seeking a dynamic Data Scientist to architect predictive analytics and recommendation pipelines. You will analyze massive datasets using SQL, Pandas, and Spark, build machine learning models in PyTorch/Scikit-Learn, and deploy generative AI RAG architectures. Requirements: 3+ years experience with Python, Machine Learning, SQL, Statistics, and Cloud platforms (AWS/GCP). Strong communication and collaboration skills required."
-        elif "ml" in role_query.lower() or "machine learning" in role_query.lower() or "ai" in role_query.lower() or "prompt" in role_query.lower():
-            role_display = f"Machine Learning Engineer - Core AI" if random.random() > 0.4 else f"AI / ML Engineer ({role_title})"
-            jd = f"{cname} is looking for a {role_display} to scale our foundation model infrastructures. You will optimize inference latencies, train Transformer and LLM architectures in PyTorch, implement RAG screening algorithms, and program high-performance CUDA/C++ kernels. Experience with cloud provisioning in AWS/GCP, Docker, Kubernetes, and Python is essential."
-        elif "frontend" in role_query.lower() or "react" in role_query.lower() or "ui" in role_query.lower() or "web" in role_query.lower():
-            role_display = f"Senior Frontend Engineer - User Interfaces" if random.random() > 0.5 else f"Frontend Developer ({role_title})"
-            jd = f"Become a part of {cname} as a {role_display}. You will build responsive, high-performance web applications and glassmorphic dashboards using React, Next.js, TypeScript, and modern HTML5/CSS3. You will collaborate closely with UX designers and backend engineers to consume REST/FastAPI endpoints and optimize state management and rendering latency."
-        else:
-            role_display = f"Software Development Engineer - Core Platform" if random.random() > 0.5 else f"Backend SDE ({role_title})"
-            jd = f"We are hiring a {role_display} at {cname} to engineer scalable microservices and transactional backend APIs. You will work extensively with Python, FastAPI/Node.js, PostgreSQL, and Redis caching layers. You will deploy containerized services on Docker and Kubernetes clusters while writing clean, testable code in an agile environment. Knowledge of Git, Linux/Bash, and AWS is required."
-            
-        url = f"https://{cdomain}/jobs/{role_query.lower().replace(' ', '-')}-{random.randint(100, 999)}"
-        
-        job_data = scraper._assemble_scraped_job(cname, role_display, jd, url)
-        job_data["source"] = f"{cname} Careers Gateway"
-        
-        if resume_text and len(resume_text.strip()) > 20:
-            match_data = matcher.compute_sdwm_match(resume_text, jd)
-            score_pct = round(match_data["final_score"] * 100)
-        else:
-            match_data = {"final_score": 0.0, "core_skills_matched": []}
-            score_pct = 75 + random.randint(-15, 15)
-            
-        job_data["match_percentage"] = score_pct
-        job_data["match_results"] = match_data
-        results.append(job_data)
-        
-    results.sort(key=lambda x: x["match_percentage"], reverse=True)
+    scraped_jobs = scraper.scrape_company_role_jobs(
+        company=company_query,
+        role=role_query,
+        resume_text=resume_text,
+        parsed_skills=payload.custom_skills if payload.custom_skills else None,
+        max_results=10
+    )
     
     return {
+        "company_query": company_query,
         "role_query": role_query,
-        "total_companies_scraped": len(top_companies),
-        "jobs": results
+        "total_companies_scraped": len(scraped_jobs),
+        "jobs": scraped_jobs
     }
 
 

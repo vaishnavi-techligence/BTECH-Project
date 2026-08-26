@@ -217,70 +217,182 @@ async function triggerJobScraping() {
     }
 }
 
-// 3b. TOP 10 TECH COMPANIES SCRAPER & MATCHER
+// 3b. DYNAMIC COMPANY & ROLE SCRAPER & RESUME MATCHER
 let currentTop10Jobs = [];
+let allTop10Jobs = [];
+let top10CurrentPage = 1;
+const TOP10_PAGE_SIZE = 10;
 
 async function triggerTop10CompanyScrape() {
-    const roleQuery = document.getElementById("jd-role").value || "Software Engineer";
-    const resumeText = document.getElementById("resume-text").value || "";
+    const companyQuery = (document.getElementById("jd-company").value || "").trim();
+    const roleQuery = (document.getElementById("jd-role").value || "").trim();
+    const resumeText = (document.getElementById("resume-text").value || "").trim();
 
     const btn = document.querySelector('[onclick="triggerTop10CompanyScrape()"]');
     const origHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--primary-glow);"></i> Scanning Resume & Scraping Top 10 Tech Portals...`;
+    
+    const targetLabel = companyQuery ? `${companyQuery} (${roleQuery || 'Roles'})` : (roleQuery || "Top Companies");
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--primary-glow);"></i> Scraping Live Job Portals for ${targetLabel}...`;
     btn.disabled = true;
 
     try {
         const res = await fetch("/api/scrape-top-10-companies", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ role_query: roleQuery, resume_text: resumeText })
+            body: JSON.stringify({
+                company_query: companyQuery,
+                role_query: roleQuery,
+                resume_text: resumeText,
+                custom_skills: typeof currentUploadedSkills !== 'undefined' ? currentUploadedSkills : []
+            })
         });
 
-        if (!res.ok) throw new Error("Failed to scrape top 10 company listings.");
+        if (!res.ok) throw new Error("Failed to scrape live company listings.");
         const data = await res.json();
-        currentTop10Jobs = data.jobs;
+        allTop10Jobs = data.jobs;
+        top10CurrentPage = 1;
 
         const container = document.getElementById("top10-jobs-container");
         const listEl = document.getElementById("top10-jobs-list");
         container.style.display = "block";
         listEl.innerHTML = "";
 
-        data.jobs.forEach((job, idx) => {
-            const matchColor = job.match_percentage >= 80 ? "var(--accent-emerald)" : (job.match_percentage >= 60 ? "var(--primary-glow)" : "var(--accent-amber)");
-            const card = document.createElement("div");
-            card.style.cssText = "background: var(--bg-pill); backdrop-filter: blur(16px); border: 1px solid var(--border-glass); border-top: 1px solid var(--border-glass-highlight); border-radius: 14px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 1.2rem; transition: var(--transition-smooth);";
-            card.onmouseover = () => { card.style.borderColor = "var(--primary-glow)"; card.style.background = "var(--border-glass-highlight)"; card.style.transform = "translateX(4px)"; };
-            card.onmouseout = () => { card.style.borderColor = "var(--border-glass)"; card.style.background = "var(--bg-pill)"; card.style.transform = "translateX(0)"; };
+        if (allTop10Jobs.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center; padding: 2rem; color:var(--text-secondary);">No job listings discovered. Try broadening the company or role search term.</div>`;
+            return;
+        }
 
-            card.innerHTML = `
-              <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem;">
-                  <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem; font-family: var(--font-heading);">${job.company}</span>
-                  <span style="font-size: 0.82rem; color: var(--text-secondary);">| ${job.role}</span>
-                </div>
-                <div style="font-size: 0.82rem; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5;">
-                  ${job.jd}
-                </div>
-              </div>
-              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem;">
-                <span style="background: rgba(0,0,0,0.5); border: 1px solid ${matchColor}; color: ${matchColor}; font-weight: 700; font-size: 0.82rem; padding: 0.25rem 0.7rem; border-radius: 20px;">
-                  ${job.match_percentage}% Match
-                </span>
-                <button type="button" onclick="selectTop10Job(${idx})" class="custom-button" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-radius: 8px;">
-                  <i class="fa-solid fa-bolt"></i> Select & Run
-                </button>
-              </div>
-            `;
-            listEl.appendChild(card);
-        });
+        renderTop10JobsBatch();
 
-        document.getElementById("top10-status-text").innerText = `Found ${data.jobs.length} roles for '${data.role_query}'`;
+        const filterSummary = companyQuery ? `'${roleQuery || 'All'}' at ${companyQuery}` : `'${roleQuery || 'Roles'}' across Top Enterprises`;
+        document.getElementById("top10-status-text").innerText = `Scraped ${data.jobs.length} matching listings for ${filterSummary}`;
     } catch (e) {
         alert("Scraping error: " + e.message);
     } finally {
         btn.innerHTML = origHtml;
         btn.disabled = false;
     }
+}
+
+function renderTop10JobsBatch() {
+    const listEl = document.getElementById("top10-jobs-list");
+    const startIndex = (top10CurrentPage - 1) * TOP10_PAGE_SIZE;
+    const endIndex = startIndex + TOP10_PAGE_SIZE;
+    const jobsBatch = allTop10Jobs.slice(startIndex, endIndex);
+
+    // Track the subset that is currently rendered so the select functionality works correctly
+    if (top10CurrentPage === 1) {
+        currentTop10Jobs = [...jobsBatch];
+    } else {
+        currentTop10Jobs = [...currentTop10Jobs, ...jobsBatch];
+    }
+
+    jobsBatch.forEach((job, batchIdx) => {
+        const idx = startIndex + batchIdx;
+            const matchColor = job.match_percentage >= 80 ? "var(--accent-emerald)" : (job.match_percentage >= 60 ? "var(--primary-glow)" : "var(--accent-amber)");
+            const matchBg = job.match_percentage >= 80 ? "rgba(16, 185, 129, 0.12)" : (job.match_percentage >= 60 ? "rgba(56, 189, 248, 0.12)" : "rgba(245, 158, 11, 0.12)");
+            
+            const ghostScore = job.ghost_report ? job.ghost_report.ghost_score : 15;
+            const ghostStatus = job.ghost_report ? job.ghost_report.status : "Active Hiring";
+            const ghostColor = ghostScore >= 60 ? "var(--accent-rose)" : (ghostScore >= 35 ? "var(--accent-amber)" : "var(--accent-emerald)");
+
+            const matchedSkills = (job.match_results && job.match_results.core_skills_matched) || [];
+            const missingSkills = (job.match_results && job.match_results.core_skills_missing) || [];
+
+            const card = document.createElement("div");
+            card.style.cssText = "background: var(--bg-pill); backdrop-filter: blur(16px); border: 1px solid var(--border-glass); border-top: 1px solid var(--border-glass-highlight); border-radius: 14px; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.9rem; transition: var(--transition-smooth);";
+            card.onmouseover = () => { card.style.borderColor = "var(--primary-glow)"; card.style.transform = "translateY(-2px)"; card.style.boxShadow = "0 8px 24px rgba(0,0,0,0.3)"; };
+            card.onmouseout = () => { card.style.borderColor = "var(--border-glass)"; card.style.transform = "translateY(0)"; card.style.boxShadow = "none"; };
+
+            // Render Skills Badges
+            let skillsHtml = "";
+            if (matchedSkills.length > 0) {
+                skillsHtml += `<div style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
+                  <span style="font-size:0.75rem; color:var(--text-secondary); margin-right:0.3rem;"><i class="fa-solid fa-circle-check" style="color:var(--accent-emerald);"></i> Matched:</span>
+                  ${matchedSkills.slice(0, 5).map(s => `<span style="font-size:0.73rem; background:rgba(16,185,129,0.15); color:var(--accent-emerald); border:1px solid rgba(16,185,129,0.3); padding:0.15rem 0.5rem; border-radius:12px; font-weight:600;">${s}</span>`).join('')}
+                </div>`;
+            }
+            if (missingSkills.length > 0) {
+                skillsHtml += `<div style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; margin-top:0.2rem;">
+                  <span style="font-size:0.75rem; color:var(--text-secondary); margin-right:0.3rem;"><i class="fa-solid fa-circle-xmark" style="color:var(--accent-amber);"></i> Skill Gaps:</span>
+                  ${missingSkills.slice(0, 4).map(s => `<span style="font-size:0.73rem; background:rgba(245,158,11,0.12); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.25); padding:0.15rem 0.5rem; border-radius:12px; font-weight:500;">${s}</span>`).join('')}
+                </div>`;
+            }
+
+            card.innerHTML = `
+              <!-- CARD HEADER: COMPANY, ROLE, MATCH SCORE -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                    <span style="font-weight: 800; color: var(--text-primary); font-size: 1.05rem; font-family: var(--font-heading); display: inline-flex; align-items: center; gap: 0.4rem;">
+                      <i class="fa-solid fa-building" style="color: var(--primary-glow); font-size: 0.9rem;"></i> ${job.company}
+                    </span>
+                    <span class="match-tag" style="background: rgba(56, 189, 248, 0.1); color: var(--primary-glow); border-color: rgba(56, 189, 248, 0.25); font-size: 0.72rem; padding: 0.15rem 0.55rem;">
+                      ${job.source || 'Verified Gateway'}
+                    </span>
+                  </div>
+                  <h4 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600; margin: 0;">${job.role}</h4>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; flex-shrink: 0;">
+                  <span style="background: ${matchBg}; border: 1px solid ${matchColor}; color: ${matchColor}; font-weight: 800; font-size: 0.85rem; padding: 0.3rem 0.8rem; border-radius: 20px; box-shadow: 0 0 12px ${matchColor}33;">
+                    ${job.match_percentage}% Match
+                  </span>
+                  <span style="font-size: 0.72rem; color: ${ghostColor}; display: inline-flex; align-items: center; gap: 0.3rem;" title="Ghost Job Probability">
+                    <i class="fa-solid fa-ghost"></i> ${ghostScore}% Ghost Risk
+                  </span>
+                </div>
+              </div>
+
+              <!-- SKILLS BREAKDOWN -->
+              ${skillsHtml}
+
+              <!-- JD SNIPPET -->
+              <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; background: rgba(0,0,0,0.2); padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass); margin-bottom: 0.7rem;">
+                ${job.jd}
+              </div>
+
+              <!-- DIRECT JOB URL DISPLAY -->
+              <div style="margin-bottom: 0.8rem; font-size: 0.75rem; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.15); padding: 0.5rem 0.7rem; border-radius: 6px; word-break: break-all; display: flex; align-items: flex-start; gap: 0.5rem; border-left: 3px solid var(--primary-glow);">
+                <i class="fa-solid fa-globe" style="color: var(--primary-glow); font-size: 0.85rem; flex-shrink: 0; margin-top: 0.15rem;"></i>
+                <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                  <span style="color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Direct Real Job URL</span>
+                  <a href="${job.url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-glow); text-decoration: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.3;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
+                    ${job.url}
+                  </a>
+                </div>
+              </div>
+
+              <!-- ACTION FOOTER: DIRECT JOB LINK & SELECT & RUN -->
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; border-top: 1px solid var(--border-glass); padding-top: 0.7rem; flex-wrap: wrap;">
+                <a href="${job.url}" target="_blank" rel="noopener noreferrer" class="custom-button secondary" style="padding: 0.42rem 0.9rem; font-size: 0.78rem; text-decoration: none; color: var(--primary-glow); border-color: rgba(56, 189, 248, 0.4); display: inline-flex; align-items: center; gap: 0.45rem; border-radius: 8px; background: rgba(56, 189, 248, 0.06);" title="Visit authentic company posting in new tab">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Company Job Link
+                </a>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <button type="button" onclick="navigator.clipboard.writeText('${job.url}'); alert('Copied Job URL: ${job.url}');" class="custom-button secondary" style="padding: 0.42rem 0.7rem; font-size: 0.78rem; border-radius: 8px;" title="Copy Job URL to Clipboard">
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                  <button type="button" onclick="selectTop10Job(${idx})" class="custom-button" style="padding: 0.42rem 1.1rem; font-size: 0.78rem; border-radius: 8px;">
+                    <i class="fa-solid fa-bolt"></i> Select & Run Pipeline
+                  </button>
+                </div>
+              </div>
+            `;
+            listEl.appendChild(card);
+        });
+
+        const loadMoreBtn = document.getElementById("top10-load-more");
+        if (allTop10Jobs.length > endIndex) {
+            loadMoreBtn.style.display = "block";
+        } else {
+            loadMoreBtn.style.display = "none";
+        }
+}
+
+function loadMoreTop10() {
+    top10CurrentPage++;
+    renderTop10JobsBatch();
 }
 
 function selectTop10Job(index) {
@@ -826,6 +938,11 @@ function filterGraph(mode) {
 }
 
 // --- ONLINE JOB CRAWLER & SEARCH ENGINE ---
+let allCrawlerJobs = [];
+let crawlerCurrentPage = 1;
+let currentCrawlerResumeText = "";
+const CRAWLER_PAGE_SIZE = 10;
+
 async function triggerOnlineCrawlerSearch() {
     const kwInput = document.getElementById("crawler-keywords");
     const keywords = kwInput.value ? kwInput.value.trim() : "";
@@ -861,14 +978,19 @@ async function triggerOnlineCrawlerSearch() {
         document.getElementById("crawler-stats-row").style.display = "grid";
         document.getElementById("crawler-stat-found").innerText = data.total_fetched;
         document.getElementById("crawler-stat-matched").innerText = data.total_matched;
-        document.getElementById("crawler-stat-status").innerText = "Crawled WWR Feed";
+        document.getElementById("crawler-stat-status").innerText = "Crawled Data Feeds";
         document.getElementById("crawler-stat-status").style.color = "var(--primary-glow)";
         
         // Hide placeholder
         document.getElementById("crawler-placeholder").style.display = "none";
         
         // Render jobs list
-        renderCrawledJobsList(data.jobs, resumeText);
+        allCrawlerJobs = data.jobs;
+        crawlerCurrentPage = 1;
+        currentCrawlerResumeText = resumeText;
+        document.getElementById("crawler-results-list").innerHTML = "";
+        
+        renderCrawlerJobsBatch();
     } catch (e) {
         alert("Crawler Error: " + e.message);
     } finally {
@@ -877,16 +999,19 @@ async function triggerOnlineCrawlerSearch() {
     }
 }
 
-function renderCrawledJobsList(jobs, hasResume) {
+function renderCrawlerJobsBatch() {
     const listContainer = document.getElementById("crawler-results-list");
-    listContainer.innerHTML = "";
+    const startIndex = (crawlerCurrentPage - 1) * CRAWLER_PAGE_SIZE;
+    const endIndex = startIndex + CRAWLER_PAGE_SIZE;
+    const jobsBatch = allCrawlerJobs.slice(startIndex, endIndex);
     
-    if (jobs.length === 0) {
+    if (allCrawlerJobs.length === 0) {
         listContainer.innerHTML = `<div style="text-align:center; padding: 2rem; color:var(--text-secondary);">No job listings found for those keywords. Try another search.</div>`;
         return;
     }
     
-    jobs.forEach((job, idx) => {
+    jobsBatch.forEach((job, batchIdx) => {
+        const idx = startIndex + batchIdx;
         const pct = job.match_percentage;
         const skillsMatched = job.match_results.core_skills_matched || [];
         const skillsMissing = job.match_results.core_skills_missing || [];
@@ -924,7 +1049,7 @@ function renderCrawledJobsList(jobs, hasResume) {
         scoreSec.style.flexDirection = "column";
         scoreSec.style.alignItems = "center";
         
-        if (hasResume && hasResume.trim().length > 20) {
+        if (currentCrawlerResumeText && currentCrawlerResumeText.trim().length > 20) {
             scoreSec.innerHTML = `
                 <div style="width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; color: var(--text-primary); background: radial-gradient(circle, var(--bg-main) 62%, transparent 100%), conic-gradient(${pct >= 70 ? 'var(--accent-emerald)' : 'var(--primary-glow)'} 0deg, var(--accent-purple) ${pct * 3.6}deg, var(--bg-pill) ${pct * 3.6}deg 360deg); border: 2px solid var(--border-glass); box-shadow: 0 0 15px rgba(56,189,248,0.25);">${pct}%</div>
                 <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em;">Match</span>
@@ -1016,6 +1141,18 @@ function renderCrawledJobsList(jobs, hasResume) {
             alert(`Job filled in Multi-Agent Matcher tab! Feel free to run matching or cover-letter agents now.`);
         };
     });
+
+    const loadMoreBtn = document.getElementById("crawler-load-more");
+    if (allCrawlerJobs.length > endIndex) {
+        loadMoreBtn.style.display = "block";
+    } else {
+        loadMoreBtn.style.display = "none";
+    }
+}
+
+function loadMoreCrawler() {
+    crawlerCurrentPage++;
+    renderCrawlerJobsBatch();
 }
 
 // --- THEME ENGINE (LIGHT & DARK MODE) ---

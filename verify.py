@@ -103,7 +103,7 @@ def run_tests():
     scraper = CareerPortalScraper()
     applier = AutomatedApplier()
     
-    # Scrape and Ghost check
+    # 4a. Single URL Scrape and Ghost check
     job_url = "https://careers.netflix.com/jobs/senior-data-scientist"
     scraped_job = scraper.fetch_job_details(job_url)
     print(f" -> Guess Company: {scraped_job['company']}")
@@ -111,6 +111,27 @@ def run_tests():
     print(f" -> Vacancy Ghost Score: {scraped_job['ghost_report']['ghost_score']}%")
     print(f" -> Ghost Diagnosis: {scraped_job['ghost_report']['status']}")
     assert scraped_job['ghost_report']['ghost_score'] > 0.0, "Ghost Job Detector computation failed."
+    
+    # 4b. Dynamic Company & Role Web Scraping with Resume Alignment
+    print("\n[TEST 4b] Testing Dynamic Company & Role Web Scraping (Bajaj / Product Design)...")
+    sample_resume = "Product designer with 4 years experience in Figma, UI/UX systems, user research, wireframing, and agile design."
+    scraped_roles = scraper.scrape_company_role_jobs(
+        company="Bajaj",
+        role="Product Design",
+        resume_text=sample_resume
+    )
+    print(f" -> Discovered/Scraped {len(scraped_roles)} roles for Bajaj Product Design")
+    assert len(scraped_roles) > 0, "Dynamic scraper returned 0 jobs."
+    
+    # Verify that every single scraped job has a working URL and match metrics
+    for idx, role_item in enumerate(scraped_roles[:3]):
+        print(f"   [{idx+1}] {role_item['company']} | {role_item['role']}")
+        print(f"       Direct Link: {role_item['url']}")
+        print(f"       Match Score: {role_item['match_percentage']}% | Ghost Risk: {role_item['ghost_report']['ghost_score']}%")
+        assert role_item["url"].startswith("http"), f"Job URL is invalid: {role_item['url']}"
+        assert role_item["match_percentage"] > 0, "Match percentage is 0."
+        assert "ghost_report" in role_item, "Ghost report is missing."
+    print(" -> Dynamic Company/Role scraper & link validation: PASSED")
     
     # Playwright Emulator submission check
     apply_res = applier.submit_application(

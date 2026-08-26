@@ -140,23 +140,66 @@ class SkillDecomposedMatcher:
     """
     def __init__(self):
         self.emb_handler = EmbeddingHandler()
-        # Dictionary of pre-defined skill categories for automatic extraction if no LLM parsing is available
+        # Universal multi-domain skill dictionary spanning all professional fields
         self.known_skills = {
-            "languages": ["python", "java", "c++", "go", "javascript", "typescript", "ruby", "rust", "sql", "html", "css", "r", "scala", "c#"],
-            "frameworks": ["pytorch", "tensorflow", "keras", "django", "fastapi", "spring boot", "react", "vue", "angular", "spark", "hadoop", "opencv", "flask", "node.js"],
-            "cloud_devops": ["aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "terraform", "jenkins", "ansible"],
-            "concepts": ["rag", "llm", "deep learning", "machine learning", "nlp", "computer vision", "statistics", "data structures", "algorithms", "neural networks", "prompt engineering", "g-eval", "cuda"]
+            "design": [
+                "figma", "sketch", "adobe xd", "wireframing", "prototyping", "design systems", 
+                "user research", "usability testing", "information architecture", "interaction design", 
+                "visual design", "typography", "blender", "3d modeling", "graphic design", 
+                "storyboarding", "ui/ux", "product design", "adobe creative suite", "photoshop", "illustrator"
+            ],
+            "engineering": [
+                "autocad", "solidworks", "catia", "ansys", "gd&t", "cad/cam", "cnc", "matlab", 
+                "simulink", "embedded systems", "circuit design", "pcb", "thermodynamics", 
+                "finite element analysis", "robotics", "manufacturing", "plc", "scada", "mechatronics", 
+                "structural analysis", "mechanical design", "fluids", "heat transfer"
+            ],
+            "finance_accounting": [
+                "financial modeling", "valuation", "dcf", "balance sheet", "budgeting", "forecasting", 
+                "excel", "quickbooks", "sap", "auditing", "risk management", "corporate finance", 
+                "portfolio management", "tax compliance", "ifrs", "gaap", "bloomberg", "financial analysis"
+            ],
+            "healthcare_medical": [
+                "patient care", "clinical trials", "ehr", "emr", "triage", "pharmacology", "anatomy", 
+                "nursing", "phlebotomy", "medical billing", "hipaa", "oncology", "cardiology", 
+                "public health", "pathology", "vital signs", "healthcare administration", "bls", "acls"
+            ],
+            "marketing_sales": [
+                "seo", "sem", "content strategy", "copywriting", "google analytics", "social media marketing", 
+                "brand strategy", "email marketing", "crm", "salesforce", "lead generation", "b2b sales", 
+                "market research", "public relations", "growth hacking", "digital marketing", "hubspot"
+            ],
+            "management_operations": [
+                "project management", "agile", "scrum", "kanban", "jira", "stakeholder management", 
+                "talent acquisition", "employee relations", "supply chain", "logistics", "inventory management", 
+                "quality assurance", "six sigma", "lean", "vendor management", "procurement", "operations management"
+            ],
+            "legal_compliance": [
+                "contract law", "intellectual property", "corporate governance", "legal research", 
+                "due diligence", "compliance", "regulatory affairs", "litigation", "gdpr", "risk assessment"
+            ],
+            "data_tech": [
+                "python", "sql", "java", "c++", "c#", "r", "javascript", "typescript", "html", "css", 
+                "react", "node.js", "django", "fastapi", "aws", "azure", "gcp", "docker", "kubernetes", 
+                "git", "ci/cd", "machine learning", "deep learning", "pytorch", "tensorflow", "rag", 
+                "nlp", "tableau", "power bi", "statistics", "linux", "rest api"
+            ]
         }
         
     def _extract_skills(self, text: str) -> set:
         """
-        Regex-based fallback skill extractor.
+        Universal Skill Extractor.
+        Combines multi-domain dictionary matching with dynamic capitalized phrase and technical term discovery.
         """
+        if not text:
+            return set()
+            
         extracted = set()
         clean_text = text.lower()
+        
+        # 1. Multi-domain dictionary match
         for cat, skills in self.known_skills.items():
             for skill in skills:
-                # Use word boundaries, but support special characters like c++, c#
                 pattern = r'\b' + re.escape(skill) + r'\b'
                 if skill == "c++":
                     pattern = r'c\+\+'
@@ -165,7 +208,94 @@ class SkillDecomposedMatcher:
                     
                 if re.search(pattern, clean_text):
                     extracted.add(skill.title())
+                    
+        # 2. Dynamic Capitalized Term & Tool Discovery (e.g. AutoCAD, SolidWorks, Figma, PMP, CPA, ISO 9001)
+        # Finds capitalized acronyms (2-6 letters) and capitalized compound words
+        non_skills = {
+            "THE", "AND", "FOR", "WITH", "THAT", "THIS", "FROM", "HAVE", "BEEN", "WILL", "THEY", "YOUR",
+            "CGPA", "GPA", "COEP", "BTECH", "MTECH", "BE", "ME", "MS", "BS", "HSC", "SSC", "CBSE", "ICSE",
+            "PUNE", "MUMBAI", "DELHI", "BANGALORE", "HYDERABAD", "CHENNAI", "KOLKATA", "INDIA", "USA", "UK",
+            "EMAIL", "PHONE", "TEL", "RESUME", "NAME", "PAGE", "DATE", "YEAR", "MONTH", "MALE", "FEMALE"
+        }
+        acronyms = re.findall(r'\b[A-Z]{2,6}\b', text)
+        for acr in acronyms:
+            if acr.upper() not in non_skills and len(acr) >= 2:
+                extracted.add(acr)
+                
+        # Finds bulleted items or bolded tools (e.g. "Skills: AutoCAD, SolidWorks, CATIA, GD&T")
+        skill_section_match = re.search(r'(?:skills|technologies|tools|competencies|expertise|proficiencies)[\s:]+([^\n\r]+(?:\n[^\n\r]+){0,3})', text, re.IGNORECASE)
+        if skill_section_match:
+            raw_sec = skill_section_match.group(1)
+            parts = re.split(r'[,|•·\n\r/]', raw_sec)
+            for p in parts:
+                p_clean = re.sub(r'[^a-zA-Z0-9\s#+\-]', '', p).strip()
+                if 2 <= len(p_clean) <= 25 and not any(w in p_clean.lower() for w in ["including", "experience", "years", "knowledge", "cgpa", "coep", "university", "college", "school"]):
+                    extracted.add(p_clean.title())
+                    
         return extracted
+
+    def infer_profile_and_domain(self, text: str) -> dict:
+        """
+        Infers the candidate's professional domain, primary job title, and key expertise from resume text.
+        Works across all fields (Design, Engineering, Healthcare, Finance, Marketing, Operations, etc.).
+        """
+        if not text:
+            return {"role": "Software Engineer", "domain": "Software Engineering"}
+            
+        t_low = text.lower()
+        
+        # Domain Scoring
+        domain_scores = {
+            "Product Design": sum(1 for w in ["design", "figma", "ui", "ux", "wireframe", "prototype", "user research", "usability", "sketch", "adobe xd"] if w in t_low),
+            "Mechanical Engineering": sum(1 for w in ["mechanical", "autocad", "solidworks", "catia", "ansys", "thermodynamics", "manufacturing", "cad", "gd&t", "matlab", "aerospace"] if w in t_low),
+            "Financial Analysis": sum(1 for w in ["finance", "financial", "valuation", "accounting", "dcf", "budget", "audit", "tax", "banking", "excel", "cpa", "cfa"] if w in t_low),
+            "Healthcare / Clinical": sum(1 for w in ["patient", "clinical", "nurse", "nursing", "medical", "hospital", "pharma", "triage", "care", "healthcare", "ehr"] if w in t_low),
+            "Marketing & Growth": sum(1 for w in ["marketing", "seo", "sem", "content", "brand", "campaign", "social media", "copywriting", "salesforce", "growth", "hubspot"] if w in t_low),
+            "Operations & Supply Chain": sum(1 for w in ["supply chain", "logistics", "procurement", "inventory", "operations", "six sigma", "vendor", "warehouse", "erp"] if w in t_low),
+            "Human Resources": sum(1 for w in ["recruitment", "talent acquisition", "hr", "human resources", "onboarding", "employee relations", "payroll", "workday"] if w in t_low),
+            "Legal & Compliance": sum(1 for w in ["legal", "compliance", "contract", "litigation", "regulatory", "due diligence", "counsel", "law", "gdpr"] if w in t_low),
+            "Software Engineering": sum(1 for w in ["software", "developer", "machine learning", "python", "backend", "frontend", "deep learning", "pytorch", "database", "java", "dbms", "sql", "git", "c++", "c#", "javascript", "react", "node", "data structures", "algorithms", "oop", "leetcode", "cloud", "aws"] if w in t_low)
+        }
+        
+        top_domain = max(domain_scores, key=domain_scores.get)
+        if domain_scores[top_domain] == 0:
+            top_domain = "Software Engineering"
+            
+        # Refine specific role title based on top domain
+        if top_domain == "Software Engineering":
+            if "java" in t_low and "spring" in t_low:
+                role_title = "Java Backend Developer"
+            elif "java" in t_low:
+                role_title = "Java Software Engineer"
+            elif "frontend" in t_low or "react" in t_low:
+                role_title = "Frontend Developer"
+            elif "data" in t_low and "science" in t_low:
+                role_title = "Data Scientist"
+            elif "machine learning" in t_low or "ai" in t_low:
+                role_title = "Machine Learning Engineer"
+            else:
+                role_title = "Software Engineer"
+        elif top_domain == "Product Design":
+            role_title = "Product Designer"
+        elif top_domain == "Mechanical Engineering":
+            role_title = "Mechanical Design Engineer"
+        elif top_domain == "Financial Analysis":
+            role_title = "Financial Analyst"
+        elif top_domain == "Healthcare / Clinical":
+            role_title = "Clinical Specialist"
+        elif top_domain == "Marketing & Growth":
+            role_title = "Marketing Specialist"
+        elif top_domain == "Operations & Supply Chain":
+            role_title = "Operations Specialist"
+        elif top_domain == "Human Resources":
+            role_title = "HR Specialist"
+        elif top_domain == "Legal & Compliance":
+            role_title = "Legal Counsel"
+        else:
+            role_title = "Software Engineer"
+            
+        skills = sorted(list(self._extract_skills(text)))
+        return {"role": role_title, "domain": top_domain, "skills": skills}
 
     def compute_sdwm_match(self, resume_text: str, jd_text: str, custom_skills: list = None) -> dict:
         """
