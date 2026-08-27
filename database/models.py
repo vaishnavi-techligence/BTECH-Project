@@ -22,10 +22,21 @@ def init_db():
   with get_db_connection() as conn:
     cursor = conn.cursor()
     
+    # 0. Users table
+    cursor.execute("""
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    """)
+    
     # 1. Applications table
     cursor.execute("""
       CREATE TABLE IF NOT EXISTS applications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         company TEXT NOT NULL,
         role TEXT NOT NULL,
         jd TEXT NOT NULL,
@@ -44,6 +55,7 @@ def init_db():
     cursor.execute("""
       CREATE TABLE IF NOT EXISTS pending_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         application_id INTEGER UNIQUE,
         target_send_time TEXT NOT NULL, /* ISO string */
         optimal_timezone TEXT NOT NULL,
@@ -68,6 +80,7 @@ def init_db():
     cursor.execute("""
       CREATE TABLE IF NOT EXISTS prompt_performance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         template_name TEXT NOT NULL, /* e.g. Aggressive Metrics, Humble Learner */
         status TEXT NOT NULL, /* got reply, ghosted */
         logged_at TEXT NOT NULL
@@ -87,8 +100,21 @@ def seed_database_if_empty():
     if cursor.fetchone()[0] == 0:
       print("Database is empty. Starting high-fidelity data seeding...")
       
-      # 1. Seed Applications
+      # 0. Seed Demo User
       now = datetime.now()
+      
+      try:
+          import bcrypt
+          hashed_pwd = bcrypt.hashpw("password".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+      except ImportError:
+          # Fallback if dependencies not installed during first init
+          hashed_pwd = "dummy_hash"
+          
+      cursor.execute("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)", 
+                     ("demo_user", hashed_pwd, now.isoformat()))
+      demo_user_id = cursor.lastrowid
+      
+      # 1. Seed Applications
       apps_data = [
         ("Google", "Machine Learning Engineer", "Design scalable deep learning models. Required: Python, PyTorch, PySpark.", 0.89, "got reply", (now - timedelta(days=20)).isoformat(), (now - timedelta(days=19)).isoformat(), "Python, PyTorch", "PySpark", "Collaborative"),
         ("Meta", "Senior Research Scientist", "Pioneering LLM training. Required: Python, PyTorch, CUDA, Research Paper writing.", 0.94, "got reply", (now - timedelta(days=18)).isoformat(), (now - timedelta(days=17)).isoformat(), "Python, PyTorch, CUDA", "Research Papers", "Fast-paced"),
@@ -104,16 +130,16 @@ def seed_database_if_empty():
       for app in apps_data:
         cursor.execute("""
           INSERT INTO applications 
-          (company, role, jd, match_score, status, created_at, applied_at, skills_matched, skills_missing, culture_tone)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, app)
+          (user_id, company, role, jd, match_score, status, created_at, applied_at, skills_matched, skills_missing, culture_tone)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (demo_user_id,) + app)
         
       # 2. Seed Chronological Queue for the Scheduled application (Innovation A)
       target_time = (now + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
       cursor.execute("""
-        INSERT INTO pending_queue (application_id, target_send_time, optimal_timezone)
-        VALUES (7, ?, 'US/Eastern')
-      """, (target_time.isoformat(),))
+        INSERT INTO pending_queue (user_id, application_id, target_send_time, optimal_timezone)
+        VALUES (?, 7, ?, 'US/Eastern')
+      """, (demo_user_id, target_time.isoformat()))
       
       # 4. Seed AFLOW Prompt Performance (Innovation 6)
       prompt_logs = [
@@ -127,9 +153,9 @@ def seed_database_if_empty():
       
       for log in prompt_logs:
         cursor.execute("""
-          INSERT INTO prompt_performance (template_name, status, logged_at)
-          VALUES (?, ?, ?)
-        """, log)
+          INSERT INTO prompt_performance (user_id, template_name, status, logged_at)
+          VALUES (?, ?, ?, ?)
+        """, (demo_user_id,) + log)
 
     # 3. Seed Career Knowledge Graph Trajectories (Innovation 5) - Idempotent
     graph_data = [

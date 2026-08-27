@@ -9,6 +9,10 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import pytz
 import numpy as np
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends, status
+from jose import JWTError, jwt
+import bcrypt
 
 # Import core custom modules
 from database.models import init_db, get_db_connection, DB_PATH
@@ -22,10 +26,49 @@ from evaluation.metrics import EvaluatorMetrics
 # Initialize database schema and seed dummy data on load
 init_db()
 
+# Ensure frontend directories exist
+os.makedirs("frontend/css", exist_ok=True)
+os.makedirs("frontend/js", exist_ok=True)
+
+# Ensure frontend directories exist
+os.makedirs("frontend/css", exist_ok=True)
+os.makedirs("frontend/js", exist_ok=True)
+
+from contextlib import asynccontextmanager
+
+# Instantiate core engines lazily
+matcher = None
+llm_engine = None
+scraper = None
+applier = None
+evaluator = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global matcher, llm_engine, scraper, applier, evaluator
+    print("Loading AI engines and models... This may take a moment.")
+    
+    # Lazily import heavy modules to prevent multi-process loading crashes
+    from rag_engine.matcher import SkillDecomposedMatcher
+    from llm_module.generator import AgenticLLMEngine
+    from job_scraper.scraper import CareerPortalScraper
+    from automation.applier import AutomatedApplier
+    from evaluation.metrics import EvaluatorMetrics
+    
+    matcher = SkillDecomposedMatcher()
+    llm_engine = AgenticLLMEngine()
+    scraper = CareerPortalScraper()
+    applier = AutomatedApplier()
+    evaluator = EvaluatorMetrics()
+    print("AI engines successfully initialized.")
+    yield
+    print("Shutting down AI engines...")
+
 app = FastAPI(
     title="AI Job Application Automation System",
     description="Rigorous Research-Backed B.Tech Final Year Project API Gateway (2025-2026)",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for easy cross-origin integrations
@@ -37,17 +80,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure frontend directories exist
-os.makedirs("frontend/css", exist_ok=True)
-os.makedirs("frontend/js", exist_ok=True)
-
-# Instantiate core engines
-matcher = SkillDecomposedMatcher()
-llm_engine = AgenticLLMEngine()
-scraper = CareerPortalScraper()
-applier = AutomatedApplier()
-evaluator = EvaluatorMetrics()
-
 # --- SQLite Connection Helper ---
 def run_query(query, params=(), fetch_all=True):
     with get_db_connection() as conn:
@@ -57,6 +89,42 @@ def run_query(query, params=(), fetch_all=True):
         if fetch_all:
             return [dict(row) for row in cursor.fetchall()]
         return None
+
+# --- JWT Auth Utilities ---
+SECRET_KEY = "my_super_secret_key_for_btech_project"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    users = run_query("SELECT * FROM users WHERE username = ?", (username,))
+    if not users:
+        raise credentials_exception
+    return users[0]["id"]
 
 # --- Static Asset Route Fallbacks ---
 # We serve static files directly to avoid complex static mounts crashing if folders are empty.
@@ -125,8 +193,44 @@ class DownloadPdfRequest(BaseModel):
     company: str = "Company"
     role: str = "Role"
 
+class UserCreate(BaseModel):
+    username: str
+    password: str
 
 # --- API ENDPOINTS ---
+
+@app.post("/api/register")
+def register(user: UserCreate):
+    existing = run_query("SELECT id FROM users WHERE username = ?", (user.username,))
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    now_str = datetime.now().isoformat()
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)", 
+                      (user.username, hashed_password, now_str))
+        conn.commit()
+    
+    return {"message": "User registered successfully"}
+
+@app.post("/api/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    users = run_query("SELECT * FROM users WHERE username = ?", (form_data.username,))
+    if not users:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    user = users[0]
+    if not bcrypt.checkpw(form_data.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["username"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # 1. Resume Parser Mock/Real
 @app.post("/api/parse-resume")
@@ -211,7 +315,7 @@ async def parse_resume(file: UploadFile = File(None), text_input: str = Form(Non
 
 # 2. Scrape Portal Listing
 @app.post("/api/scrape-job")
-def scrape_job(payload: ScrapeRequest):
+def scrape_job(payload: ScrapeRequest, user_id: int = Depends(get_current_user)):
     """
     Scrapes the target career listing and computes the Ghost-Job Risk Score (Innovation C).
     """
@@ -224,7 +328,7 @@ def scrape_job(payload: ScrapeRequest):
 
 # 2b. Search and Match Jobs Online (User Scraping Request)
 @app.post("/api/search-and-match")
-def search_and_match(payload: SearchAndMatchRequest):
+def search_and_match(payload: SearchAndMatchRequest, user_id: int = Depends(get_current_user)):
     """
     Crawls online job links matching keywords, scrapes each JD,
     and runs the SDWM/Recos matching engine against the user's resume.
@@ -283,7 +387,7 @@ def search_and_match(payload: SearchAndMatchRequest):
 
 # 2c. Scrape Top 10 Companies for Desired Job
 @app.post("/api/scrape-top-10-companies")
-def scrape_top_10_companies(payload: Top10ScrapeRequest):
+def scrape_top_10_companies(payload: Top10ScrapeRequest, user_id: int = Depends(get_current_user)):
     """
     Scrapes/generates matching jobs from the Top 10 Tech Companies based on the desired job role
     and evaluates match scores against the provided resume.
@@ -355,7 +459,7 @@ def scrape_top_10_companies(payload: Top10ScrapeRequest):
 
 # 3. Compute RAG / SDWM Match
 @app.post("/api/match-job")
-def match_job(payload: MatchRequest):
+def match_job(payload: MatchRequest, user_id: int = Depends(get_current_user)):
     """
     Computes Skill-Decomposed Weighted Matching (SDWM) & Recos similarity & G-Eval judge scores.
     """
@@ -377,7 +481,7 @@ def match_job(payload: MatchRequest):
 
 # 4. Multi-Agent Cover Letter & Resume Tailoring Engine
 @app.post("/api/run-pipeline")
-def run_pipeline(payload: PipelineRequest):
+def run_pipeline(payload: PipelineRequest, user_id: int = Depends(get_current_user)):
     """
     Executes the 5-Agent Pipeline, Anonymization ATS scoring, and AFLOW prompt template checks.
     Saves matched job inside SQLite applications table.
@@ -400,14 +504,15 @@ def run_pipeline(payload: PipelineRequest):
     
     query = """
         INSERT INTO applications 
-        (company, role, jd, match_score, status, created_at, skills_matched, skills_missing, culture_tone)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (user_id, company, role, jd, match_score, status, created_at, skills_matched, skills_missing, culture_tone)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     now_str = datetime.now().isoformat()
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, (
+            user_id,
             payload.company,
             payload.role,
             payload.jd_text,
@@ -502,7 +607,7 @@ def download_resume_pdf_endpoint(payload: DownloadPdfRequest):
 
 # 5. Chronological Application Scheduler (Innovation A)
 @app.post("/api/schedule-job")
-def schedule_job(payload: ScheduleRequest):
+def schedule_job(payload: ScheduleRequest, user_id: int = Depends(get_current_user)):
     """
     Schedules job submissions targeting the optimal historical response windows
     (Tuesday - Thursday morning local timezone).
@@ -536,13 +641,13 @@ def schedule_job(payload: ScheduleRequest):
     
     # Insert or update pending_queue
     query = """
-        INSERT OR REPLACE INTO pending_queue (application_id, target_send_time, optimal_timezone, status)
-        VALUES (?, ?, ?, 'pending')
+        INSERT OR REPLACE INTO pending_queue (user_id, application_id, target_send_time, optimal_timezone, status)
+        VALUES (?, ?, ?, ?, 'pending')
     """
-    run_query(query, (payload.application_id, optimal_str, payload.timezone), fetch_all=False)
+    run_query(query, (user_id, payload.application_id, optimal_str, payload.timezone), fetch_all=False)
     
     # Update application status to scheduled
-    run_query("UPDATE applications SET status = 'scheduled' WHERE id = ?", (payload.application_id,), fetch_all=False)
+    run_query("UPDATE applications SET status = 'scheduled' WHERE id = ? AND user_id = ?", (payload.application_id, user_id), fetch_all=False)
     
     return {
         "status": "success",
@@ -555,12 +660,12 @@ def schedule_job(payload: ScheduleRequest):
 
 # 6. Trigger Autoplate/Playwright Emulator Applier
 @app.post("/api/apply-now/{application_id}")
-def apply_now(application_id: int):
+def apply_now(application_id: int, user_id: int = Depends(get_current_user)):
     """
     Triggers automated Applier form filler for specific application, 
     and logs outcomes into prompt performance AFLOW tables.
     """
-    apps = run_query("SELECT * FROM applications WHERE id = ?", (application_id,))
+    apps = run_query("SELECT * FROM applications WHERE id = ? AND user_id = ?", (application_id, user_id))
     if not apps:
         raise HTTPException(status_code=404, detail="Application record not found.")
         
@@ -580,7 +685,7 @@ def apply_now(application_id: int):
     
     # Update SQLite application status
     now_str = datetime.now().isoformat()
-    run_query("UPDATE applications SET status = 'applied', applied_at = ? WHERE id = ?", (now_str, application_id), fetch_all=False)
+    run_query("UPDATE applications SET status = 'applied', applied_at = ? WHERE id = ? AND user_id = ?", (now_str, application_id, user_id), fetch_all=False)
     
     # Log template outcome to AFLOW prompt tracker for performance learning
     # We randomly seed the outcome to simulate learning cycles in DB
@@ -591,26 +696,26 @@ def apply_now(application_id: int):
     status = "got reply" if app["id"] % 2 == 0 else "ghosted"
     
     run_query("""
-        INSERT INTO prompt_performance (template_name, status, logged_at)
-        VALUES (?, ?, ?)
-    """, (template_name, status, now_str), fetch_all=False)
+        INSERT INTO prompt_performance (user_id, template_name, status, logged_at)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, template_name, status, now_str), fetch_all=False)
     
     # Remove from chronological queue if existed
-    run_query("DELETE FROM pending_queue WHERE application_id = ?", (application_id,), fetch_all=False)
+    run_query("DELETE FROM pending_queue WHERE application_id = ? AND user_id = ?", (application_id, user_id), fetch_all=False)
     
     return apply_results
 
 
 # 7. Get Applications (Kanban tracking)
 @app.get("/api/get-applications")
-def get_applications():
-    return run_query("SELECT * FROM applications ORDER BY id DESC")
+def get_applications(user_id: int = Depends(get_current_user)):
+    return run_query("SELECT * FROM applications WHERE user_id = ? ORDER BY id DESC", (user_id,))
 
 
 # 8. Update Application Status (Drag & Drop interface support)
 @app.post("/api/update-status")
-def update_status(payload: UpdateStatusRequest):
-    run_query("UPDATE applications SET status = ? WHERE id = ?", (payload.status, payload.application_id), fetch_all=False)
+def update_status(payload: UpdateStatusRequest, user_id: int = Depends(get_current_user)):
+    run_query("UPDATE applications SET status = ? WHERE id = ? AND user_id = ?", (payload.status, payload.application_id, user_id), fetch_all=False)
     return {"status": "success", "application_id": payload.application_id, "new_status": payload.status}
 
 
@@ -623,7 +728,7 @@ def get_knowledge_graph():
 
 # 10. Dashboard Analytics and Evaluation Metrics API
 @app.get("/api/get-analytics")
-def get_analytics():
+def get_analytics(user_id: int = Depends(get_current_user)):
     """
     Computes overall system diagnostic dashboards:
     - GCR (Goal Completion Rate)
@@ -632,7 +737,7 @@ def get_analytics():
     - AFLOW prompt template efficiency rates
     - G-Eval rubric distributions
     """
-    apps = run_query("SELECT * FROM applications")
+    apps = run_query("SELECT * FROM applications WHERE user_id = ?", (user_id,))
     
     total = len(apps)
     applied = sum(1 for a in apps if a["status"] in ["applied", "got reply", "ghosted"])
@@ -652,8 +757,9 @@ def get_analytics():
                COUNT(CASE WHEN status = 'got reply' THEN 1 END) as replies,
                COUNT(*) as total
         FROM prompt_performance
+        WHERE user_id = ?
         GROUP BY template_name
-    """)
+    """, (user_id,))
     
     prompt_success_rates = []
     for p in prompts_perf:

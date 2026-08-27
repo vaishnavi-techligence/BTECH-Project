@@ -7,9 +7,146 @@ let applicationsList = [];
 // DOM elements
 const loadingOverlay = document.getElementById("loading-overlay");
 
+// --- JWT AUTHENTICATION INTERCEPTOR ---
+const originalFetch = window.fetch;
+window.fetch = async function() {
+    let [resource, config] = arguments;
+    
+    // Check if the URL needs auth (most /api endpoints)
+    if (typeof resource === 'string' && resource.startsWith('/api') && !resource.includes('/api/login') && !resource.includes('/api/register')) {
+        const token = localStorage.getItem("jwt_token");
+        if (!token) {
+            document.getElementById("auth-overlay").style.display = "flex";
+            throw new Error("Authentication required");
+        }
+        
+        config = config || {};
+        config.headers = config.headers || {};
+        
+        // If config.headers is a Headers object, we need to append
+        if (config.headers instanceof Headers) {
+            config.headers.append("Authorization", `Bearer ${token}`);
+        } else {
+            config.headers["Authorization"] = `Bearer ${token}`;
+        }
+    }
+    
+    try {
+        const response = await originalFetch(resource, config);
+        if (response.status === 401) {
+            // Token expired or invalid
+            handleLogout();
+            throw new Error("Session expired. Please login again.");
+        }
+        return response;
+    } catch (e) {
+        throw e;
+    }
+};
+
+// --- AUTH UI LOGIC ---
+function switchAuthTab(tab) {
+    document.getElementById("tab-login-btn").classList.remove("active");
+    document.getElementById("tab-register-btn").classList.remove("active");
+    document.getElementById("auth-login-form").style.display = "none";
+    document.getElementById("auth-register-form").style.display = "none";
+    document.getElementById("auth-error-msg").style.display = "none";
+    document.getElementById("auth-success-msg").style.display = "none";
+    
+    if (tab === 'login') {
+        document.getElementById("tab-login-btn").classList.add("active");
+        document.getElementById("auth-login-form").style.display = "block";
+    } else {
+        document.getElementById("tab-register-btn").classList.add("active");
+        document.getElementById("auth-register-form").style.display = "block";
+    }
+}
+
+async function handleLogin() {
+    const user = document.getElementById("login-username").value;
+    const pass = document.getElementById("login-password").value;
+    const errorEl = document.getElementById("auth-error-msg");
+    errorEl.style.display = "none";
+    
+    if (!user || !pass) {
+        errorEl.innerText = "Please enter username and password.";
+        errorEl.style.display = "block";
+        return;
+    }
+    
+    const formData = new URLSearchParams();
+    formData.append("username", user);
+    formData.append("password", pass);
+    
+    try {
+        const res = await originalFetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData
+        });
+        
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || "Login failed");
+        }
+        
+        const data = await res.json();
+        localStorage.setItem("jwt_token", data.access_token);
+        document.getElementById("auth-overlay").style.display = "none";
+        refreshDashboardData();
+    } catch (e) {
+        errorEl.innerText = e.message;
+        errorEl.style.display = "block";
+    }
+}
+
+async function handleRegister() {
+    const user = document.getElementById("register-username").value;
+    const pass = document.getElementById("register-password").value;
+    const errorEl = document.getElementById("auth-error-msg");
+    const successEl = document.getElementById("auth-success-msg");
+    errorEl.style.display = "none";
+    successEl.style.display = "none";
+    
+    if (!user || !pass) {
+        errorEl.innerText = "Please choose a username and password.";
+        errorEl.style.display = "block";
+        return;
+    }
+    
+    try {
+        const res = await originalFetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || "Registration failed");
+        }
+        
+        successEl.innerText = "Registration successful! You can now sign in.";
+        successEl.style.display = "block";
+        setTimeout(() => switchAuthTab('login'), 1500);
+    } catch (e) {
+        errorEl.innerText = e.message;
+        errorEl.style.display = "block";
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem("jwt_token");
+    document.getElementById("auth-overlay").style.display = "flex";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-    // Initial sync
-    refreshDashboardData();
+    if (!localStorage.getItem("jwt_token")) {
+        document.getElementById("auth-overlay").style.display = "flex";
+    } else {
+        document.getElementById("auth-overlay").style.display = "none";
+        refreshDashboardData();
+    }
 });
 
 // TAB NAVIGATOR

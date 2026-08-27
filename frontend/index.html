@@ -8,7 +8,55 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <!-- AUTH OVERLAY -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card glass-panel">
+      <div class="logo-container" style="justify-content: center; margin-bottom: 1.5rem;">
+        <div class="logo-glow"><i class="fa-solid fa-layer-group"></i></div>
+        <div>
+          <div class="logo-text" style="font-size: 1.6rem;">SmartApply</div>
+          <div style="font-size: 0.8rem; color: var(--primary-glow); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">AI Career Studio</div>
+        </div>
+      </div>
+      
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register-btn" onclick="switchAuthTab('register')">Create Account</button>
+      </div>
 
+      <div id="auth-error-msg" style="color: var(--accent-rose); font-size: 0.85rem; margin-bottom: 1rem; text-align: center; display: none;"></div>
+      <div id="auth-success-msg" style="color: var(--accent-emerald); font-size: 0.85rem; margin-bottom: 1rem; text-align: center; display: none;"></div>
+
+      <div id="auth-login-form">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-username" class="form-control" placeholder="Enter your username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+        </div>
+        <button class="custom-button" style="width: 100%; justify-content: center;" onclick="handleLogin()">
+          <i class="fa-solid fa-right-to-bracket"></i> Authenticate & Enter Studio
+        </button>
+      </div>
+
+      <div id="auth-register-form" style="display: none;">
+        <div class="form-group">
+          <label>Choose Username</label>
+          <input type="text" id="register-username" class="form-control" placeholder="Unique username">
+        </div>
+        <div class="form-group">
+          <label>Create Password</label>
+          <input type="password" id="register-password" class="form-control" placeholder="Strong password">
+        </div>
+        <button class="custom-button" style="width: 100%; justify-content: center; background: var(--secondary-glow);" onclick="handleRegister()">
+          <i class="fa-solid fa-user-plus"></i> Register Profile
+        </button>
+      </div>
+      <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 1.5rem;">Secure JWT Authentication Gateway</p>
+    </div>
+  </div>
   <!-- LOADING OVERLAY -->
   <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
@@ -63,6 +111,12 @@
           <a class="nav-item" onclick="switchTab('tab-crawler', this)">
             <i class="fa-solid fa-globe"></i>
             <span>Online Crawler</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" style="color: var(--accent-rose); margin-top: 1rem;" onclick="handleLogout()">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Secure Logout</span>
           </a>
         </li>
       </ul>
