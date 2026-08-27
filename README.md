@@ -59,6 +59,11 @@ SmartApply isn't just an automation script; it incorporates several research-bac
 5. **AFLOW Adaptive Prompt Optimizer**: Analyzes historical success rates in the SQLite database to automatically select the highest-performing cover letter prompt template ("Aggressive Metrics", "Humble Learner", or "Direct Value Proposer").
 6. **Intrinsic Dimensionality Metrics**: Evaluates the geometric complexity of text embeddings using covariance eigenvalues to accurately determine if a generated cover letter feels "robotic" or "natural".
 7. **Clarity & Readability Index**: Computes Flesch-Kincaid reading ease, penalizes overly long sentences, and tracks complex word density (jargon) to ensure all outbound communications are direct and professional.
+8. **Online Job Crawler & Multi-Match Engine**: An **Autonomous Search Engine** that automatically scours the internet to find which companies are looking for your exact skill set right now.
+   *   **Broad Internet Crawling:** Sends requests to multiple live public job boards (Jobicy, Remotive, Arbeitnow) and RSS feeds (WeWorkRemotely) to harvest dozens of active job postings based on a keyword.
+   *   **Bulk Scraping:** Scrapes the Job Descriptions (JDs) for every single one of those 50+ jobs in real-time.
+   *   **The "Multi-Match" Engine:** Runs the complex RAG matching algorithm against all 50 jobs concurrently. It then presents a list of the internet's open jobs, completely sorted by how well your specific resume matches them.
+   *   **Targeted Evaluation (Sniper) vs. Market Discovery (Radar):** While the *Targeted RAG Matcher* is a sniper used to optimize your resume for a specific job portal you found, the *Online Job Crawler* acts as a radar when you want the AI to scour the market and output 50+ matched jobs.
 
 ---
 

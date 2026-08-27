@@ -520,109 +520,123 @@ class CareerPortalScraper:
             
         primary_tag = role if role else (search_terms[0] if search_terms else "engineer")
         
-        # 1. Jobicy Live API (Returns real individual job URLs)
-        try:
-            q_enc = urllib.parse.quote(primary_tag)
-            r = requests.get(f"https://jobicy.com/api/v2/remote-jobs?count=50&tag={q_enc}", headers=headers, timeout=5.0)
-            if r.status_code == 200:
-                for j in r.json().get("jobs", []):
-                    j_url = j.get("url", "")
-                    if j_url and j_url not in seen_urls:
-                        seen_urls.add(j_url)
-                        desc = BeautifulSoup(j.get("jobDescription", ""), "html.parser").get_text(separator=" ", strip=True)
-                        results.append({
-                            "company": j.get("companyName", "Technology Enterprise"),
-                            "role": j.get("jobTitle", role or "Specialist"),
-                            "url": j_url,
-                            "jd": desc[:1200] if desc else f"{j.get('companyName')} is hiring for {j.get('jobTitle')}.",
-                            "source": "Jobicy Live Job Board"
-                        })
-        except Exception as e:
-            print(f"Jobicy API error: {e}")
-            
-        # 2. Remotive Live API (Returns real individual job URLs)
-        try:
-            remotive_q = f"{company} {role}".strip() if (company or role) else " ".join(search_terms[:2])
-            q_enc = urllib.parse.quote(remotive_q if remotive_q else "software")
-            r = requests.get(f"https://remotive.com/api/remote-jobs?search={q_enc}", headers=headers, timeout=5.0)
-            if r.status_code == 200:
-                for j in r.json().get("jobs", []):
-                    j_url = j.get("url", "")
-                    if j_url and j_url not in seen_urls:
-                        seen_urls.add(j_url)
-                        desc = BeautifulSoup(j.get("description", ""), "html.parser").get_text(separator=" ", strip=True)
-                        results.append({
-                            "company": j.get("company_name", "Global Enterprise"),
-                            "role": j.get("title", role or "Specialist"),
-                            "url": j_url,
-                            "jd": desc[:1200] if desc else f"{j.get('company_name')} is hiring {j.get('title')}.",
-                            "source": "Remotive Live Job Feed"
-                        })
-        except Exception as e:
-            print(f"Remotive API error: {e}")
-            
-        # 3. Arbeitnow Live API (Returns real individual job URLs)
-        try:
-            arbeit_q = role if role else (company if company else "developer")
-            q_enc = urllib.parse.quote(arbeit_q)
-            r = requests.get(f"https://www.arbeitnow.com/api/job-board-api?search={q_enc}", headers=headers, timeout=5.0)
-            if r.status_code == 200:
-                for j in r.json().get("data", []):
-                    j_url = j.get("url", "")
-                    if j_url and j_url not in seen_urls:
-                        seen_urls.add(j_url)
-                        desc = BeautifulSoup(j.get("description", ""), "html.parser").get_text(separator=" ", strip=True)
-                        results.append({
-                            "company": j.get("company_name", "Enterprise"),
-                            "role": j.get("title", role or "Specialist"),
-                            "url": j_url,
-                            "jd": desc[:1200] if desc else f"{j.get('company_name')} is recruiting for {j.get('title')}.",
-                            "source": "Arbeitnow Live Job Board"
-                        })
-        except Exception as e:
-            print(f"Arbeitnow API error: {e}")
-            
-        # 4. We Work Remotely (WWR) RSS Feed
-        try:
-            r = requests.get("https://weworkremotely.com/remote-jobs.rss", headers=headers, timeout=5.0)
-            if r.status_code == 200:
-                import xml.etree.ElementTree as ET
-                root = ET.fromstring(r.content)
-                # WWR puts items inside <channel>
-                for item in root.findall('./channel/item'):
-                    j_url = item.findtext('link', '')
-                    title = item.findtext('title', '')
-                    desc_html = item.findtext('description', '')
-                    
-                    if j_url and j_url not in seen_urls:
-                        # Basic filtering against search terms (WWR feed returns all recent jobs)
-                        if search_terms:
-                            # If role or company is specified, ensure at least one keyword matches the title
-                            title_lower = title.lower()
-                            if not any(term.lower() in title_lower for term in search_terms[:2]):
-                                continue
-                                
-                        seen_urls.add(j_url)
+        import concurrent.futures
+
+        def fetch_jobicy():
+            local_results = []
+            try:
+                q_enc = urllib.parse.quote(primary_tag)
+                r = requests.get(f"https://jobicy.com/api/v2/remote-jobs?count=50&tag={q_enc}", headers=headers, timeout=5.0)
+                if r.status_code == 200:
+                    for j in r.json().get("jobs", []):
+                        j_url = j.get("url", "")
+                        if j_url:
+                            desc = BeautifulSoup(j.get("jobDescription", ""), "html.parser").get_text(separator=" ", strip=True)
+                            local_results.append({
+                                "company": j.get("companyName", "Technology Enterprise"),
+                                "role": j.get("jobTitle", role or "Specialist"),
+                                "url": j_url,
+                                "jd": desc[:1200] if desc else f"{j.get('companyName')} is hiring for {j.get('jobTitle')}.",
+                                "source": "Jobicy Live Job Board"
+                            })
+            except Exception as e:
+                print(f"Jobicy API error: {e}")
+            return local_results
+
+        def fetch_remotive():
+            local_results = []
+            try:
+                remotive_q = f"{company} {role}".strip() if (company or role) else " ".join(search_terms[:2])
+                q_enc = urllib.parse.quote(remotive_q if remotive_q else "software")
+                r = requests.get(f"https://remotive.com/api/remote-jobs?search={q_enc}", headers=headers, timeout=5.0)
+                if r.status_code == 200:
+                    for j in r.json().get("jobs", []):
+                        j_url = j.get("url", "")
+                        if j_url:
+                            desc = BeautifulSoup(j.get("description", ""), "html.parser").get_text(separator=" ", strip=True)
+                            local_results.append({
+                                "company": j.get("company_name", "Global Enterprise"),
+                                "role": j.get("title", role or "Specialist"),
+                                "url": j_url,
+                                "jd": desc[:1200] if desc else f"{j.get('company_name')} is hiring {j.get('title')}.",
+                                "source": "Remotive Live Job Feed"
+                            })
+            except Exception as e:
+                print(f"Remotive API error: {e}")
+            return local_results
+
+        def fetch_arbeitnow():
+            local_results = []
+            try:
+                arbeit_q = role if role else (company if company else "developer")
+                q_enc = urllib.parse.quote(arbeit_q)
+                r = requests.get(f"https://www.arbeitnow.com/api/job-board-api?search={q_enc}", headers=headers, timeout=5.0)
+                if r.status_code == 200:
+                    for j in r.json().get("data", []):
+                        j_url = j.get("url", "")
+                        if j_url:
+                            desc = BeautifulSoup(j.get("description", ""), "html.parser").get_text(separator=" ", strip=True)
+                            local_results.append({
+                                "company": j.get("company_name", "Enterprise"),
+                                "role": j.get("title", role or "Specialist"),
+                                "url": j_url,
+                                "jd": desc[:1200] if desc else f"{j.get('company_name')} is recruiting for {j.get('title')}.",
+                                "source": "Arbeitnow Live Job Board"
+                            })
+            except Exception as e:
+                print(f"Arbeitnow API error: {e}")
+            return local_results
+
+        def fetch_wwr():
+            local_results = []
+            try:
+                r = requests.get("https://weworkremotely.com/remote-jobs.rss", headers=headers, timeout=5.0)
+                if r.status_code == 200:
+                    import xml.etree.ElementTree as ET
+                    root = ET.fromstring(r.content)
+                    for item in root.findall('./channel/item'):
+                        j_url = item.findtext('link', '')
+                        title = item.findtext('title', '')
+                        desc_html = item.findtext('description', '')
                         
-                        # WWR titles are usually formatted as "Company Name: Job Title"
-                        comp_name = "Tech Company"
-                        job_title = title
-                        if ":" in title:
-                            parts = title.split(":", 1)
-                            comp_name = parts[0].strip()
-                            job_title = parts[1].strip()
-                            
-                        desc = BeautifulSoup(desc_html, "html.parser").get_text(separator=" ", strip=True)
-                        results.append({
-                            "company": comp_name,
-                            "role": job_title,
-                            "url": j_url,
-                            "jd": desc[:1200] if desc else f"{comp_name} is hiring for {job_title}.",
-                            "source": "We Work Remotely RSS"
-                        })
-        except Exception as e:
-            print(f"WWR RSS error: {e}")
-            
+                        if j_url:
+                            if search_terms:
+                                title_lower = title.lower()
+                                if not any(term.lower() in title_lower for term in search_terms[:2]):
+                                    continue
+                                    
+                            comp_name = "Tech Company"
+                            job_title = title
+                            if ":" in title:
+                                parts = title.split(":", 1)
+                                comp_name = parts[0].strip()
+                                job_title = parts[1].strip()
+                                
+                            desc = BeautifulSoup(desc_html, "html.parser").get_text(separator=" ", strip=True)
+                            local_results.append({
+                                "company": comp_name,
+                                "role": job_title,
+                                "url": j_url,
+                                "jd": desc[:1200] if desc else f"{comp_name} is hiring for {job_title}.",
+                                "source": "We Work Remotely RSS"
+                            })
+            except Exception as e:
+                print(f"WWR RSS error: {e}")
+            return local_results
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(fetch_jobicy),
+                executor.submit(fetch_remotive),
+                executor.submit(fetch_arbeitnow),
+                executor.submit(fetch_wwr)
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                for job in future.result():
+                    if job["url"] not in seen_urls:
+                        seen_urls.add(job["url"])
+                        results.append(job)
+                        
         return results
 
     def _generate_verified_company_jobs(self, company: str, role: str, resume_skills: list = None, domain: str = "General") -> list:
@@ -756,8 +770,9 @@ class CareerPortalScraper:
                     aggregated_jobs.append(item)
 
         # Assemble and score each job against the resume
-        final_jobs = []
-        for job in aggregated_jobs[:max_results + 10]:
+        import concurrent.futures
+
+        def process_job(job):
             assembled = self._assemble_scraped_job(job["company"], job["role"], job["jd"], job["url"])
             assembled["source"] = job.get("source", f"{job['company']} Live Job Portal")
             
@@ -779,7 +794,13 @@ class CareerPortalScraper:
                 
             assembled["match_percentage"] = int(np.clip(score_pct, 10, 99))
             assembled["match_results"] = match_data
-            final_jobs.append(assembled)
+            return assembled
+
+        final_jobs = []
+        jobs_to_process = aggregated_jobs[:max_results + 10]
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            final_jobs = list(executor.map(process_job, jobs_to_process))
             
         # Sort: if company is specified, prioritize matching company names first, then match score
         if company_clean:
@@ -805,7 +826,7 @@ class CareerPortalScraper:
             assembled["source"] = j.get("source", "Online Crawler")
             assembled_jobs.append(assembled)
             
-        return assembled_jobs[:10]
+        return assembled_jobs[:100]
 
     # --- Dynamic Simulated Crawler (Infinite Scroll) ---
     def simulate_dynamic_company_scrape(self, role_query: str, limit: int = 10, offset: int = 0) -> list:
@@ -862,6 +883,9 @@ class CareerPortalScraper:
                 print(f"Online RSS crawler error on {url}: {e}")
             return local_jobs
 
+        feed_urls = [
+            "https://weworkremotely.com/remote-jobs.rss"
+        ]
         # Concurrent fetching
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             results = executor.map(fetch_feed, feed_urls)

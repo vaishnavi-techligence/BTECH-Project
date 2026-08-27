@@ -527,6 +527,9 @@ function renderTop10JobsBatch() {
                   <button type="button" onclick="navigator.clipboard.writeText('${job.url}'); alert('Copied Job URL: ${job.url}');" class="custom-button secondary" style="padding: 0.42rem 0.7rem; font-size: 0.78rem; border-radius: 8px;" title="Copy Job URL to Clipboard">
                     <i class="fa-regular fa-copy"></i>
                   </button>
+                  <button type="button" id="btn-traj-top10-${idx}" class="custom-button secondary" style="padding: 0.42rem 1.1rem; font-size: 0.78rem; border-radius: 8px; border-color: rgba(56, 189, 248, 0.4); color: var(--primary-glow); background: rgba(56, 189, 248, 0.06);" title="View Career Trajectory">
+                    <i class="fa-solid fa-code-branch"></i>
+                  </button>
                   <button type="button" onclick="selectTop10Job(${idx})" class="custom-button" style="padding: 0.42rem 1.1rem; font-size: 0.78rem; border-radius: 8px;">
                     <i class="fa-solid fa-bolt"></i> Select & Run Pipeline
                   </button>
@@ -534,6 +537,11 @@ function renderTop10JobsBatch() {
               </div>
             `;
             listEl.appendChild(card);
+            
+            document.getElementById(`btn-traj-top10-${idx}`).onclick = () => {
+                renderDynamicTrajectoryGraph(job);
+                switchTab("tab-graph", document.querySelector('[onclick*="tab-graph"]'));
+            };
         });
 
         const loadMoreBtn = document.getElementById("top10-load-more");
@@ -1085,6 +1093,28 @@ function renderMobilityGraph(data, filterMode = 'all') {
     }
 }
 
+// Generate dynamic trajectory graph for a scraped job
+function renderDynamicTrajectoryGraph(job) {
+    const data = [];
+    const roleName = job.role || "Target Role";
+    
+    // Add matched skills
+    if (job.match_results && job.match_results.core_skills_matched) {
+        job.match_results.core_skills_matched.forEach(skill => {
+            data.push({ source: skill, target: roleName, type: "skill-to-role", weight: 1 });
+        });
+    }
+    
+    // Add missing skills
+    if (job.match_results && job.match_results.core_skills_missing) {
+        job.match_results.core_skills_missing.forEach(skill => {
+            data.push({ source: skill, target: roleName, type: "skill-to-role", weight: 0.5 });
+        });
+    }
+    
+    renderMobilityGraph(data, 'all');
+}
+
 // Graph filter toggle function
 function filterGraph(mode) {
     document.querySelectorAll(".graph-filter-btn").forEach(btn => {
@@ -1285,6 +1315,9 @@ function renderCrawlerJobsBatch() {
                 <i class="fa-solid fa-up-right-from-square"></i> View Original Listing
             </a>
             <div style="display:flex; gap:0.8rem;">
+                <button class="custom-button" id="btn-traj-${idx}" style="padding:0.6rem 1.4rem; font-size:0.85rem; border-radius:10px; background: rgba(56,189,248,0.1); border: 1px solid var(--primary-glow); color: var(--primary-glow);">
+                    <i class="fa-solid fa-code-branch"></i> View Trajectory
+                </button>
                 <button class="custom-button" id="btn-add-pipeline-${idx}" style="padding:0.6rem 1.4rem; font-size:0.85rem; border-radius:10px;">
                     <i class="fa-solid fa-plus"></i> Import & Evaluate Role
                 </button>
@@ -1292,6 +1325,12 @@ function renderCrawlerJobsBatch() {
         `;
         card.appendChild(actions);
         listContainer.appendChild(card);
+        
+        // Render Trajectory Logic
+        document.getElementById(`btn-traj-${idx}`).onclick = () => {
+            renderDynamicTrajectoryGraph(job);
+            switchTab("tab-graph", document.querySelector('[onclick*="tab-graph"]'));
+        };
         
         // Add to pipeline logic
         document.getElementById(`btn-add-pipeline-${idx}`).onclick = () => {

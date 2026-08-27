@@ -13,7 +13,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import Depends, status
 from jose import JWTError, jwt
 import bcrypt
-
+import concurrent.futures
 # Import core custom modules
 from database.models import init_db, get_db_connection, DB_PATH
 from rag_engine.matcher import SkillDecomposedMatcher
@@ -343,19 +343,16 @@ def search_and_match(payload: SearchAndMatchRequest, user_id: int = Depends(get_
     
     # 2. Run matching on each scraped job if resume is provided
     results = []
-    matched_count = 0
     
-    for job in scraped_jobs:
+    def evaluate_job(job):
         match_data = {}
+        score_pct = 0
         if payload.resume_text and len(payload.resume_text.strip()) > 20:
             # Run the matching engine
             match_data = matcher.compute_sdwm_match(payload.resume_text, job["jd"])
             score_pct = round(match_data["final_score"] * 100)
-            if score_pct >= 50:
-                matched_count += 1
         else:
             # Fallback when no resume uploaded yet
-            score_pct = 0
             match_data = {
                 "final_score": 0.0,
                 "core_skills_matched": [],
@@ -366,7 +363,7 @@ def search_and_match(payload: SearchAndMatchRequest, user_id: int = Depends(get_
                 "counterfactuals": []
             }
             
-        results.append({
+        return {
             "company": job["company"],
             "role": job["role"],
             "jd": job["jd"],
@@ -377,7 +374,17 @@ def search_and_match(payload: SearchAndMatchRequest, user_id: int = Depends(get_
             "source": job["source"],
             "match_results": match_data,
             "match_percentage": score_pct
-        })
+        }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        evaluated_jobs = list(executor.map(evaluate_job, scraped_jobs))
+        
+    for res in evaluated_jobs:
+        results.append(res)
+        
+    results.sort(key=lambda x: x["match_percentage"], reverse=True)
+    
+    matched_count = sum(1 for res in results if res["match_percentage"] >= 50)
         
     return {
         "keywords": payload.keywords,
