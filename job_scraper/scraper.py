@@ -797,11 +797,15 @@ class CareerPortalScraper:
         """
         Scrapes job links online matching keywords across multiple RSS feeds and API sources.
         """
-        career_pages = self.find_career_pages(keywords)
-        jobs = self.scrape_jobs_from_career_pages(career_pages, keywords)
+        raw_jobs = self._search_public_job_apis(company="", role=keywords)
         
-        # Limit to 8 jobs to match previous behavior
-        return jobs[:8]
+        assembled_jobs = []
+        for j in raw_jobs:
+            assembled = self._assemble_scraped_job(j["company"], j["role"], j["jd"], j["url"])
+            assembled["source"] = j.get("source", "Online Crawler")
+            assembled_jobs.append(assembled)
+            
+        return assembled_jobs[:10]
 
     # --- Dynamic Simulated Crawler (Infinite Scroll) ---
     def simulate_dynamic_company_scrape(self, role_query: str, limit: int = 10, offset: int = 0) -> list:

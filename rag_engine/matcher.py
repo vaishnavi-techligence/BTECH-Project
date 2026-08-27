@@ -2,12 +2,7 @@ import numpy as np
 import hashlib
 import re
 
-# Try to import sentence-transformers, but fall back to deterministic vector generator if not available
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+# Import sentence-transformers lazily inside the class to prevent Windows multiprocessing hangs
 
 class EmbeddingHandler:
     """
@@ -20,15 +15,16 @@ class EmbeddingHandler:
         self.model_name = model_name
         self.model = None
         
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                # Load sentence transformer model
-                self.model = SentenceTransformer(model_name)
-            except Exception as e:
-                print(f"Warning: Failed to load SentenceTransformer ({e}). Falling back to deterministic vector fallback.")
-                self.model = None
-        else:
+        try:
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer(model_name)
+            self.has_st = True
+        except ImportError:
             print("sentence-transformers not available. Operating in deterministic vector fallback mode.")
+            self.has_st = False
+        except Exception as e:
+            print(f"Warning: Failed to load SentenceTransformer ({e}). Falling back to deterministic vector fallback.")
+            self.has_st = False
 
     def get_embedding(self, text: str) -> np.ndarray:
         """
@@ -140,6 +136,27 @@ class SkillDecomposedMatcher:
     """
     def __init__(self):
         self.emb_handler = EmbeddingHandler()
+        
+        # Load HuggingFace JobBERT NER Pipeline for Contextual Skill Extraction (Option 1)
+        self.ner_pipeline = None
+        try:
+            from transformers import pipeline
+            import os
+            
+            # Set a flag so it only prints the loading message once (since loading takes time)
+            print("INFO: Initializing JobBERT Contextual NER Model for Skill Extraction...")
+            
+            # We use jjzha/jobbert_skill_extraction which is fine-tuned on real resumes
+            self.ner_pipeline = pipeline(
+                "token-classification", 
+                model="jjzha/jobbert_skill_extraction", 
+                aggregation_strategy="simple",
+                device=-1 # Force CPU for compatibility, though GPU could be used if available
+            )
+            print("SUCCESS: JobBERT NER Model loaded. Deep-learning extraction is ACTIVE.")
+        except Exception as e:
+            print(f"WARNING: Failed to load JobBERT NER Model. Falling back to Regex/Dictionary engine. Error: {e}")
+
         # Universal multi-domain skill dictionary spanning all professional fields
         self.known_skills = {
             "design": [
@@ -182,7 +199,15 @@ class SkillDecomposedMatcher:
                 "python", "sql", "java", "c++", "c#", "r", "javascript", "typescript", "html", "css", 
                 "react", "node.js", "django", "fastapi", "aws", "azure", "gcp", "docker", "kubernetes", 
                 "git", "ci/cd", "machine learning", "deep learning", "pytorch", "tensorflow", "rag", 
-                "nlp", "tableau", "power bi", "statistics", "linux", "rest api"
+                "nlp", "tableau", "power bi", "statistics", "linux", "rest api", "graphql", "kafka", 
+                "redis", "mongodb", "postgresql", "mysql", "elasticsearch", "cassandra", "hadoop", 
+                "spark", "scala", "golang", "go", "rust", "ruby", "php", "swift", "kotlin", "dart", 
+                "flutter", "react native", "angular", "vue.js", "svelte", "spring boot", "flask", 
+                "express.js", "nest.js", "ansible", "terraform", "jenkins", "gitlab", "github actions", 
+                "promethues", "grafana", "splunk", "databricks", "snowflake", "bigquery", "redshift", 
+                "oracle", "sql server", "firebase", "supabase", "pandas", "numpy", "scikit-learn", 
+                "keras", "opencv", "huggingface", "llm", "langchain", "prompt engineering", "airflow", 
+                "dbt", "kafka", "rabbitmq", "celery", "graphql", "grpc", "websockets", "microservices"
             ]
         }
         
@@ -196,6 +221,25 @@ class SkillDecomposedMatcher:
             
         extracted = set()
         clean_text = text.lower()
+        
+        # 0. ADVANCED NER EXTRACTION (HuggingFace Transformer)
+        if self.ner_pipeline:
+            try:
+                # Truncate to roughly 1500 chars to avoid hitting the 512 token limit of BERT models
+                text_slice = text[:1500] 
+                ner_results = self.ner_pipeline(text_slice)
+                for entity in ner_results:
+                    # Depending on aggregation_strategy, the key is usually 'entity_group' or 'entity'
+                    group = entity.get('entity_group', entity.get('entity', ''))
+                    # JobBERT outputs 'B', 'I' (for B-Skill, I-Skill) or 'Skill'
+                    if 'Skill' in group or 'Knowledge' in group or group in ['B', 'I', 'B-Skill', 'I-Skill']:
+                        word = entity['word'].strip()
+                        # Clean up subword token artifacts like '##'
+                        word = word.replace('##', '').strip()
+                        if len(word) > 2: # Ignore tiny subwords
+                            extracted.add(word)
+            except Exception as e:
+                print(f"NER Extraction Error: {e}")
         
         # 1. Multi-domain dictionary match
         for cat, skills in self.known_skills.items():
@@ -232,7 +276,69 @@ class SkillDecomposedMatcher:
                 if 2 <= len(p_clean) <= 25 and not any(w in p_clean.lower() for w in ["including", "experience", "years", "knowledge", "cgpa", "coep", "university", "college", "school"]):
                     extracted.add(p_clean.title())
                     
-        return extracted
+        # 3. Dynamic CamelCase & PascalCase (e.g. FastAPI, PostgreSQL, Next.js) and extensions
+        camel_pascal = re.findall(r'\b[A-Z][a-z]+[A-Z][a-zA-Z]*\b|\b[a-z]+[A-Z][a-zA-Z]*\b', text)
+        for term in camel_pascal:
+            if len(term) > 3 and term.lower() not in non_skills:
+                extracted.add(term)
+                
+        extensions = re.findall(r'\b[A-Za-z0-9]+\.(?:js|py|net|io|com)\b', text, re.IGNORECASE)
+        for ext in extensions:
+            if len(ext) > 3:
+                extracted.add(ext)
+                
+        # Deduplicate case-insensitively, preferring CamelCase or Acronyms over .title()
+        deduped = {}
+        for skill in extracted:
+            key = skill.lower()
+            # If the skill already exists, only overwrite it if the new one has more uppercase letters (e.g. FastAPI over Fastapi)
+            if key in deduped:
+                current_uppers = sum(1 for c in deduped[key] if c.isupper())
+                new_uppers = sum(1 for c in skill if c.isupper())
+                if new_uppers > current_uppers:
+                    deduped[key] = skill
+            else:
+                deduped[key] = skill
+                    
+        return set(deduped.values())
+
+    def _extract_dynamic_shared_skills(self, jd_text: str, resume_text: str) -> set:
+        """
+        Dynamically extracts skills that appear in both the JD and the Resume,
+        bypassing the need for them to be present in the static known_skills dictionary.
+        """
+        stopwords = {'The', 'And', 'For', 'With', 'That', 'This', 'From', 'Have', 'Been', 'Will', 'They', 'Your', 'Our', 'Are', 'Can', 'You', 'Not', 'But', 'All', 'Any', 'Which', 'Their', 'Has', 'Was', 'Were', 'What', 'How', 'Why', 'When', 'Where', 'Who', 'Whom', 'About', 'Into', 'Over', 'After', 'Before', 'Between', 'Under', 'More', 'Most', 'Some', 'Such', 'No', 'Nor', 'Too', 'Very', 'Can', 'Will', 'Just', 'Should', 'Now', 'Looking', 'We', 'A', 'An', 'In', 'On', 'At', 'To', 'Is', 'It', 'As', 'Be', 'By', 'Do', 'If', 'Of', 'Or', 'Up', 'Also', 'Required', 'Preferred', 'Must', 'Know', 'Strong', 'Good', 'Experience', 'Years', 'Knowledge', 'Ability', 'Skills', 'Candidate', 'Role', 'Responsibilities', 'Project', 'Team', 'Work', 'Using', 'Environment', 'Application', 'System', 'Systems', 'Support', 'Management', 'Business', 'Data', 'Software', 'Engineering', 'Technical', 'Technology', 'Company', 'Including', 'Related', 'Field', 'Degree', 'Bachelor', 'Master'}
+        
+        jd_words_raw = re.findall(r'\b[a-zA-Z0-9+#]+\b', jd_text)
+        res_lower = resume_text.lower()
+        shared = set()
+        
+        n_grams = []
+        for n in range(1, 4):
+            for i in range(len(jd_words_raw) - n + 1):
+                gram = jd_words_raw[i:i+n]
+                if gram[0].title() in stopwords or gram[-1].title() in stopwords:
+                    continue
+                is_capitalized = all(w[0].isupper() or w.isupper() for w in gram)
+                is_acronym = len(gram) == 1 and gram[0].isupper() and len(gram[0]) >= 2
+                if is_capitalized or is_acronym:
+                    phrase = " ".join(gram)
+                    if len(phrase) >= 2:
+                        n_grams.append(phrase)
+                        
+        skill_section_match = re.search(r'(?:skills|technologies|tools|competencies|expertise|proficiencies)[\s:]+([^\n\r]+(?:\n[^\n\r]+){0,3})', jd_text, re.IGNORECASE)
+        if skill_section_match:
+            parts = re.split(r'[,|•·\n\r/]', skill_section_match.group(1))
+            for p in parts:
+                p_clean = re.sub(r'[^a-zA-Z0-9\s#+\-]', '', p).strip()
+                if 2 <= len(p_clean) <= 25 and not any(w.title() in stopwords for w in p_clean.split()):
+                    n_grams.append(p_clean)
+                    
+        for phrase in set(n_grams):
+            if re.search(r'\b' + re.escape(phrase.lower()) + r'\b', res_lower):
+                shared.add(phrase.title())
+                
+        return shared
 
     def infer_profile_and_domain(self, text: str) -> dict:
         """
@@ -308,6 +414,12 @@ class SkillDecomposedMatcher:
         jd_skills = self._extract_skills(jd_text)
         resume_skills = self._extract_skills(resume_text)
         
+        # Add dynamically discovered shared skills to both sets
+        dynamic_skills = self._extract_dynamic_shared_skills(jd_text, resume_text)
+        for ds in dynamic_skills:
+            jd_skills.add(ds.title())
+            resume_skills.add(ds.title())
+            
         if custom_skills:
             for s in custom_skills:
                 jd_skills.add(s.title())

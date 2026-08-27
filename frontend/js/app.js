@@ -298,6 +298,17 @@ async function handleResumeUpload(event) {
         document.getElementById("resume-text").value = data.full_text;
         statusEl.innerText = `Successfully parsed ${file.name} (${data.parsed_skills.length} skills detected)`;
         statusEl.style.color = "var(--accent-emerald)";
+        
+        // Display extracted skills
+        const skillsContainer = document.getElementById("extracted-skills-container");
+        if (data.parsed_skills && data.parsed_skills.length > 0) {
+            skillsContainer.innerHTML = data.parsed_skills.map(s => 
+                `<span style="font-size:0.75rem; background:rgba(56,189,248,0.1); color:var(--primary-glow); border:1px solid rgba(56,189,248,0.3); padding:0.15rem 0.6rem; border-radius:12px; font-weight:600;">${s}</span>`
+            ).join('');
+            skillsContainer.style.display = "flex";
+        } else {
+            skillsContainer.style.display = "none";
+        }
     } catch (e) {
         statusEl.innerText = `Upload failed: ${e.message}`;
         statusEl.style.color = "var(--accent-rose)";
@@ -341,11 +352,17 @@ async function triggerJobScraping() {
             ghostCard.style.display = "block";
             ghostScoreEl.innerText = `${data.ghost_report.ghost_score}%`;
             ghostIndicatorEl.innerText = data.ghost_report.indicators.join(" | ");
+            
+            // Alert user about high ghost job risk
+            alert(`Scraped ${data.company} - ${data.role} successfully!\n\n⚠️ WARNING: This appears to be a ${data.ghost_report.status} (${data.ghost_report.ghost_score}% probability).\nIndicators: ${data.ghost_report.indicators[0]}`);
         } else {
             ghostCard.style.display = "none";
+            let safeMsg = `Scraped ${data.company} - ${data.role} successfully!\n\n✅ This looks like an active, legitimate job posting.`;
+            if (data.ghost_report) {
+                safeMsg += ` (Ghost Risk: ${data.ghost_report.ghost_score}%)`;
+            }
+            alert(safeMsg);
         }
-        
-        alert(`Scraped ${data.company} - ${data.role} successfully!`);
     } catch (e) {
         alert("Error scraping URL: " + e.message);
     } finally {
@@ -541,6 +558,19 @@ function selectTop10Job(index) {
     document.getElementById("jd-role").value = job.role;
     document.getElementById("jd-text").value = job.jd;
     currentJdText = job.jd;
+    
+    // Show Ghost Warning if score is high
+    const ghostCard = document.getElementById("result-ghost-card");
+    const ghostScoreEl = document.getElementById("result-ghost-score");
+    const ghostIndicatorEl = document.getElementById("result-ghost-indicator");
+    
+    if (job.ghost_report && job.ghost_report.ghost_score >= 40.0) {
+        ghostCard.style.display = "block";
+        ghostScoreEl.innerText = `${job.ghost_report.ghost_score}%`;
+        ghostIndicatorEl.innerText = job.ghost_report.indicators.join(" | ");
+    } else {
+        ghostCard.style.display = "none";
+    }
 
     // Trigger pipeline automatically!
     triggerMatchingPipeline();
@@ -1227,7 +1257,7 @@ function renderCrawlerJobsBatch() {
         }
         
         // Skills matched/missing
-        if (hasResume && hasResume.trim().length > 20 && (skillsMatched.length > 0 || skillsMissing.length > 0)) {
+        if (currentCrawlerResumeText && currentCrawlerResumeText.trim().length > 20 && (skillsMatched.length > 0 || skillsMissing.length > 0)) {
             const skillsSec = document.createElement("div");
             skillsSec.style.display = "flex";
             skillsSec.style.flexWrap = "wrap";
