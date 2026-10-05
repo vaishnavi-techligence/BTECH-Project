@@ -930,25 +930,36 @@ function renderMobilityGraph(data, filterMode = 'all') {
     };
 
     // Dynamic coordinate assignment fallback for any missing nodes in database
-    let dynamicX = 500;
-    let dynamicY = 50;
+    let dynamicSkillX = 60;
+    let dynamicSkillY = 700;
+    let dynamicRoleX = 420;
+    let dynamicRoleY = 700;
+    
     data.forEach(edge => {
         [edge.source, edge.target].forEach(nodeName => {
             if (!nodeCoords[nodeName]) {
-                const isSkill = (edge.type === "skill-to-role" && nodeName === edge.source);
-                nodeCoords[nodeName] = { 
-                    x: dynamicX, 
-                    y: dynamicY, 
-                    type: isSkill ? "skill" : "role" 
-                };
-                dynamicY += 70;
-                if (dynamicY > 620) {
-                    dynamicY = 60;
-                    dynamicX += 160;
+                const isSkill = (edge.type === "skill-to-role" && nodeName === edge.source) || (edge.type === "skill-to-skill");
+                if (isSkill) {
+                    nodeCoords[nodeName] = { x: dynamicSkillX, y: dynamicSkillY, type: "skill" };
+                    dynamicSkillY += 60;
+                    if (dynamicSkillY > 1200) {
+                        dynamicSkillY = 700;
+                        dynamicSkillX += 200;
+                    }
+                } else {
+                    nodeCoords[nodeName] = { x: dynamicRoleX, y: dynamicRoleY, type: "role" };
+                    dynamicRoleY += 80;
+                    if (dynamicRoleY > 1200) {
+                        dynamicRoleY = 700;
+                        dynamicRoleX += 280;
+                    }
                 }
             }
         });
     });
+
+    const maxDynamicY = Math.max(dynamicSkillY, dynamicRoleY, 680);
+    container.style.minHeight = (maxDynamicY + 80) + "px";
 
     // Filter edges based on user selection to reduce visual clutter
     const filteredEdges = data.filter(edge => {
@@ -959,7 +970,7 @@ function renderMobilityGraph(data, filterMode = 'all') {
     // Draw SVG connections
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "680");
+    svg.setAttribute("height", maxDynamicY + 80);
     svg.style.position = "absolute";
     svg.style.top = "0";
     svg.style.left = "0";
@@ -1022,9 +1033,22 @@ function renderMobilityGraph(data, filterMode = 'all') {
         node.style.transition = "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
         
         if (coord.type === "skill") {
-            node.style.borderLeft = "3px solid var(--primary-glow)";
-            node.style.boxShadow = "0 4px 15px rgba(56, 189, 248, 0.15)";
-            node.innerHTML = `<i class="fa-solid fa-code" style="color:var(--primary-glow); margin-right:6px;"></i> ${name}`;
+            const hasResumeSkills = window.currentUploadedSkills && window.currentUploadedSkills.length > 0;
+            const isMissing = hasResumeSkills && !window.currentUploadedSkills.some(s => s.toLowerCase() === name.toLowerCase());
+
+            if (isMissing) {
+                node.style.borderLeft = "3px dashed var(--accent-amber)";
+                node.style.boxShadow = "0 4px 15px rgba(245, 158, 11, 0.15)";
+                node.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:var(--accent-amber); margin-right:6px;"></i> <span style="color:var(--text-secondary)">${name} <span style="font-size:0.65rem; opacity:0.75">(Missing)</span></span>`;
+            } else if (hasResumeSkills) {
+                node.style.borderLeft = "3px solid var(--accent-emerald)";
+                node.style.boxShadow = "0 4px 15px rgba(16, 185, 129, 0.15)";
+                node.innerHTML = `<i class="fa-solid fa-check-circle" style="color:var(--accent-emerald); margin-right:6px;"></i> ${name}`;
+            } else {
+                node.style.borderLeft = "3px solid var(--primary-glow)";
+                node.style.boxShadow = "0 4px 15px rgba(56, 189, 248, 0.15)";
+                node.innerHTML = `<i class="fa-solid fa-code" style="color:var(--primary-glow); margin-right:6px;"></i> ${name}`;
+            }
         } else {
             node.style.borderLeft = "3px solid var(--accent-purple)";
             node.style.boxShadow = "0 4px 15px rgba(168, 85, 247, 0.15)";

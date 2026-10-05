@@ -1,6 +1,7 @@
 import numpy as np
 import hashlib
 import re
+from functools import lru_cache
 
 # Import sentence-transformers lazily inside the class to prevent Windows multiprocessing hangs
 
@@ -26,6 +27,7 @@ class EmbeddingHandler:
             print(f"Warning: Failed to load SentenceTransformer ({e}). Falling back to deterministic vector fallback.")
             self.has_st = False
 
+    @lru_cache(maxsize=4096)
     def get_embedding(self, text: str) -> np.ndarray:
         """
         Generate a 384-dimensional normalized vector embedding.
@@ -259,9 +261,39 @@ class SkillDecomposedMatcher:
             "THE", "AND", "FOR", "WITH", "THAT", "THIS", "FROM", "HAVE", "BEEN", "WILL", "THEY", "YOUR",
             "CGPA", "GPA", "COEP", "BTECH", "MTECH", "BE", "ME", "MS", "BS", "HSC", "SSC", "CBSE", "ICSE",
             "PUNE", "MUMBAI", "DELHI", "BANGALORE", "HYDERABAD", "CHENNAI", "KOLKATA", "INDIA", "USA", "UK",
-            "EMAIL", "PHONE", "TEL", "RESUME", "NAME", "PAGE", "DATE", "YEAR", "MONTH", "MALE", "FEMALE"
+            "EMAIL", "PHONE", "TEL", "RESUME", "NAME", "PAGE", "DATE", "YEAR", "MONTH", "MALE", "FEMALE",
+            "VINOD", "XII", "CLASS", "COURSE", "BOARD", "EXTRA", "IMPLEMENTED", "KNOWN", "OF", "SCORE", "SEM",
+            "DEVELOPED", "CREATED", "BUILT", "MANAGED", "LED", "DESIGNED", "USED", "WORKED", "USING", "BASED",
+            "PROJECT", "PROJECTS", "EDUCATION", "EXPERIENCE", "SKILLS", "CERTIFICATION", "ACHIEVEMENTS",
+            "UNIVERSITY", "SCHOOL", "COLLEGE", "DEGREE", "BACHELOR", "MASTER", "DIPLOMA", "INSTITUTE",
+            "TECHNOLOGY", "ENGINEERING", "SCIENCE", "COMPUTER", "APPLICATION", "SYSTEM", "SOFTWARE", "HARDWARE",
+            "PARTICIPATED", "AWARD", "WINNER", "FIRST", "SECOND", "THIRD", "RANK", "PERCENTAGE", "MARKS",
+            "ENGLISH", "HINDI", "MARATHI", "LANGUAGES", "HOBBIES", "INTERESTS", "ACTIVITIES", "SPORTS",
+            "OBJECTIVE", "SUMMARY", "PROFILE", "PERSONAL", "DETAILS", "DECLARATION", "SIGNATURE", "PLACE",
+            "WORK", "INTERNSHIP", "TRAINING", "WORKSHOP", "SEMINAR", "PAPER", "PRESENTATION", "PUBLICATION",
+            "ROLE", "RESPONSIBILITY", "TEAM", "MEMBER", "LEADER", "COORDINATOR", "ORGANIZER", "VOLUNTEER",
+            "MONTHS", "YEARS", "DAYS", "WEEKS", "CURRENT", "PRESENT", "TILL", "DATE", "EXPECTED", "GRADUATED",
+            "ABOUT", "LEARNING", "KNOWLEDGE", "UNDERSTANDING", "FAMILIAR", "BASIC", "ADVANCED", "EXPERT",
+            "GOOD", "EXCELLENT", "FLUENT", "NATIVE", "PROFICIENT", "WORKING", "INTERMEDIATE", "BEGINNER",
+            "ALL", "ANY", "ARE", "AS", "AT", "BE", "BY", "CAN", "DO", "ETC", "HAS", "IN", "IS", "IT",
+            "NOT", "ON", "OR", "SO", "TO", "WAS", "WE", "WHO", "WHY", "YOU", "AN", "AM", "ARE", "DID", "DOES",
+            "HAD", "HER", "HIM", "HIS", "HOW", "IF", "ME", "MY", "NO", "OUR", "OUT", "SHE", "THEIR", "THEM"
         }
-        acronyms = re.findall(r'\b[A-Z]{2,6}\b', text)
+        acronyms = []
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Skip lines that are mostly uppercase (likely headings or names)
+            alpha_chars = [c for c in line if c.isalpha()]
+            if alpha_chars:
+                upper_ratio = sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars)
+                if upper_ratio > 0.8:
+                    continue
+                    
+            acronyms.extend(re.findall(r'\b[A-Z]{2,6}\b', line))
+            
         for acr in acronyms:
             if acr.upper() not in non_skills and len(acr) >= 2:
                 extracted.add(acr)
@@ -274,12 +306,13 @@ class SkillDecomposedMatcher:
             for p in parts:
                 p_clean = re.sub(r'[^a-zA-Z0-9\s#+\-]', '', p).strip()
                 if 2 <= len(p_clean) <= 25 and not any(w in p_clean.lower() for w in ["including", "experience", "years", "knowledge", "cgpa", "coep", "university", "college", "school"]):
-                    extracted.add(p_clean.title())
+                    if p_clean.upper() not in non_skills:
+                        extracted.add(p_clean.title())
                     
         # 3. Dynamic CamelCase & PascalCase (e.g. FastAPI, PostgreSQL, Next.js) and extensions
         camel_pascal = re.findall(r'\b[A-Z][a-z]+[A-Z][a-zA-Z]*\b|\b[a-z]+[A-Z][a-zA-Z]*\b', text)
         for term in camel_pascal:
-            if len(term) > 3 and term.lower() not in non_skills:
+            if len(term) > 3 and term.upper() not in non_skills:
                 extracted.add(term)
                 
         extensions = re.findall(r'\b[A-Za-z0-9]+\.(?:js|py|net|io|com)\b', text, re.IGNORECASE)
