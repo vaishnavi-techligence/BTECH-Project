@@ -258,16 +258,35 @@ class SkillDecomposedMatcher:
                 for i in range(0, len(text), chunk_size):
                     text_slice = text[i:i+chunk_size]
                     ner_results = self.ner_pipeline(text_slice)
+                    
+                    # Manually aggregate B-Skill and I-Skill tokens to handle multi-word skills exactly as the author intended
+                    current_skill = ""
                     for entity in ner_results:
-                        # Depending on aggregation_strategy, the key is usually 'entity_group' or 'entity'
-                        group = entity.get('entity_group', entity.get('entity', ''))
-                        # JobBERT outputs 'B', 'I' (for B-Skill, I-Skill) or 'Skill'
-                        if 'Skill' in group or 'Knowledge' in group or group in ['B', 'I', 'B-Skill', 'I-Skill']:
-                            word = entity['word'].strip()
-                            # Clean up subword token artifacts like '##'
-                            word = word.replace('##', '').strip()
-                            if len(word) > 2: # Ignore tiny subwords
-                                extracted.add(word)
+                        label = entity.get('entity_group', entity.get('entity', ''))
+                        word = entity['word']
+                        
+                        # Handle subword token artifacts
+                        is_subword = word.startswith("##")
+                        if is_subword:
+                            word = word[2:]
+                            
+                        if label in ['B', 'B-Skill', 'Skill']:
+                            if current_skill:
+                                if len(current_skill) > 2:
+                                    extracted.add(current_skill.strip())
+                            current_skill = word
+                        elif label in ['I', 'I-Skill'] or (label == 'Skill' and current_skill):
+                            if current_skill:
+                                if is_subword:
+                                    current_skill += word
+                                else:
+                                    current_skill += " " + word
+                            else:
+                                current_skill = word
+                                
+                    if current_skill and len(current_skill) > 2:
+                        extracted.add(current_skill.strip())
+                        
             except Exception as e:
                 print(f"NER Extraction Error: {e}")
                 
