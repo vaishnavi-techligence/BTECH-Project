@@ -157,6 +157,9 @@ class SkillDecomposedMatcher:
         # Store candidate YoE globally during matching
         self.candidate_experience = {}
         
+        # Cache JD extraction to avoid redundant LLM/BERT inference on identical JDs
+        self.jd_cache = {}
+        
         # Load HuggingFace JobBERT NER Pipeline for Contextual Skill Extraction (Option 1)
         self.ner_pipeline = None
         try:
@@ -508,8 +511,15 @@ class SkillDecomposedMatcher:
         2. Measures matching levels using embeddings and text matching.
         3. Returns core skills matched, preferred skills matched, missing skills, and overall score.
         """
-        # Extract skills
-        jd_skills = self._extract_skills(jd_text)
+        # Optimize: Extract JD skills only once per JD (avoids redundant 5s LLM calls and BERT chunks)
+        jd_hash = hash(jd_text)
+        if jd_hash in self.jd_cache:
+            jd_skills = self.jd_cache[jd_hash].copy()
+        else:
+            jd_skills = self._extract_skills(jd_text)
+            self.jd_cache[jd_hash] = jd_skills.copy()
+            
+        # Extract Resume skills
         resume_skills = self._extract_skills(resume_text)
         
         # Add dynamically discovered shared skills to both sets
@@ -603,12 +613,12 @@ class SkillDecomposedMatcher:
             # Context-Awareness filter: Ignore aspirational sentences (False Positive Reduction)
             aspirational_words = ["learning", "want to", "aspire", "future", "looking forward", "hope", "plan to", "interested in"]
             
-            for sentence in resume_sentences:
+            for idx, sentence in enumerate(resume_sentences):
                 # Skip sentences that express aspiration rather than possession
                 if any(aw in sentence for aw in aspirational_words) and not any(pw in sentence for pw in ["used", "developed", "built", "implemented", "applied"]):
                     continue
                     
-                sim = calculate_cosine_similarity(skill_emb, self.emb_handler.get_embedding(sentence))
+                sim = calculate_cosine_similarity(skill_emb, resume_embs[idx])
                 if sim > max_sim:
                     max_sim = sim
             # If similarity is above 0.75, treat as partially matched
