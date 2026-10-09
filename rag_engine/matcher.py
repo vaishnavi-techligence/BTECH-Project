@@ -287,7 +287,7 @@ class SkillDecomposedMatcher:
                             else:
                                 current_skill = word
                                 
-                    if current_skill and len(current_skill) > 2:
+                    if current_skill and 2 < len(current_skill) < 40:
                         extracted.add(current_skill.strip())
                         
             except Exception as e:
@@ -345,7 +345,10 @@ class SkillDecomposedMatcher:
             "GOOD", "EXCELLENT", "FLUENT", "NATIVE", "PROFICIENT", "WORKING", "INTERMEDIATE", "BEGINNER",
             "ALL", "ANY", "ARE", "AS", "AT", "BE", "BY", "CAN", "DO", "ETC", "HAS", "IN", "IS", "IT",
             "NOT", "ON", "OR", "SO", "TO", "WAS", "WE", "WHO", "WHY", "YOU", "AN", "AM", "ARE", "DID", "DOES",
-            "HAD", "HER", "HIM", "HIS", "HOW", "IF", "ME", "MY", "NO", "OUR", "OUT", "SHE", "THEIR", "THEM"
+            "HAD", "HER", "HIM", "HIS", "HOW", "IF", "ME", "MY", "NO", "OUR", "OUT", "SHE", "THEIR", "THEM",
+            "CET", "JEE", "EXAM", "MAINS", "SUBJECTS", "ELECTIVES", "INTERNSHIPS", "LABORATORY", "L ABORATORY",
+            "NEET", "GATE", "GRE", "GMAT", "TOEFL", "IELTS", "UPSC", "SSC", "HSC", "CBSE", "ICSE",
+            "DRAWING", "PATIENCE", "CREATIVITY"
         }
         # Removed naive acronym regex \b[A-Z]{2,6}\b to avoid false positives like CET, JEE, EXAM
                 
@@ -365,8 +368,13 @@ class SkillDecomposedMatcher:
         # Deduplicate case-insensitively, preferring CamelCase or Acronyms over .title()
         deduped = {}
         for skill in extracted:
+            # Final rigid safety checks
+            if len(skill) > 35 or len(skill.strip()) < 2:
+                continue
+            if skill.upper() in non_skills:
+                continue
+                
             key = skill.lower()
-            # If the skill already exists, only overwrite it if the new one has more uppercase letters (e.g. FastAPI over Fastapi)
             if key in deduped:
                 current_uppers = sum(1 for c in deduped[key] if c.isupper())
                 new_uppers = sum(1 for c in skill if c.isupper())
