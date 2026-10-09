@@ -170,10 +170,10 @@ class SkillDecomposedMatcher:
             print("INFO: Initializing JobBERT Contextual NER Model for Skill Extraction...")
             
             # We use jjzha/jobbert_skill_extraction which is fine-tuned on real resumes
+            # Removed aggregation_strategy to let our custom BIO aggregation loop handle B-Skill/I-Skill tags
             self.ner_pipeline = pipeline(
                 "token-classification", 
                 model="jjzha/jobbert_skill_extraction", 
-                aggregation_strategy="simple",
                 device=-1 # Force CPU for compatibility, though GPU could be used if available
             )
             print("SUCCESS: JobBERT NER Model loaded. Deep-learning extraction is ACTIVE.")
@@ -233,6 +233,7 @@ class SkillDecomposedMatcher:
                 "dbt", "kafka", "rabbitmq", "celery", "graphql", "grpc", "websockets", "microservices",
                 "next.js", "nuxt", "vite", "webpack", "babel", "sass", "less", "tailwind", "bootstrap", 
                 "material ui", "ant design", "chakra ui", "framer motion", "three.js", "webgl", "webrtc", 
+                "mern", "mean", "lamp", "rest", "api", "json", "xml", "soap", "ajax", "linux", "unix", 
                 "socket.io", "oauth", "jwt", "saml", "openid connect", "keycloak", "auth0", "cognito", 
                 "iam", "kms", "vpc", "ec2", "s3", "lambda", "fargate", "ecs", "eks", "aks", "gke", 
                 "cloudformation", "pulumi", "helm", "argo", "istio", "linkerd", "consul", "vault", 
