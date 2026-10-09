@@ -347,24 +347,7 @@ class SkillDecomposedMatcher:
             "NOT", "ON", "OR", "SO", "TO", "WAS", "WE", "WHO", "WHY", "YOU", "AN", "AM", "ARE", "DID", "DOES",
             "HAD", "HER", "HIM", "HIS", "HOW", "IF", "ME", "MY", "NO", "OUR", "OUT", "SHE", "THEIR", "THEM"
         }
-        acronyms = []
-        for line in text.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Skip lines that are mostly uppercase (likely headings or names)
-            alpha_chars = [c for c in line if c.isalpha()]
-            if alpha_chars:
-                upper_ratio = sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars)
-                if upper_ratio > 0.8:
-                    continue
-                    
-            acronyms.extend(re.findall(r'\b[A-Z]{2,6}\b', line))
-            
-        for acr in acronyms:
-            if acr.upper() not in non_skills and len(acr) >= 2:
-                extracted.add(acr)
+        # Removed naive acronym regex \b[A-Z]{2,6}\b to avoid false positives like CET, JEE, EXAM
                 
         # Finds bulleted items or bolded tools (e.g. "Skills: AutoCAD, SolidWorks, CATIA, GD&T")
         skill_section_match = re.search(r'(?:skills|technologies|tools|competencies|expertise|proficiencies)[\s:]+([^\n\r]+(?:\n[^\n\r]+){0,3})', text, re.IGNORECASE)
@@ -377,16 +360,7 @@ class SkillDecomposedMatcher:
                     if p_clean.upper() not in non_skills:
                         extracted.add(p_clean.title())
                     
-        # 3. Dynamic CamelCase & PascalCase (e.g. FastAPI, PostgreSQL, Next.js) and extensions
-        camel_pascal = re.findall(r'\b[A-Z][a-z]+[A-Z][a-zA-Z]*\b|\b[a-z]+[A-Z][a-zA-Z]*\b', text)
-        for term in camel_pascal:
-            if len(term) > 3 and term.upper() not in non_skills:
-                extracted.add(term)
-                
-        extensions = re.findall(r'\b[A-Za-z0-9]+\.(?:js|py|net|io|com)\b', text, re.IGNORECASE)
-        for ext in extensions:
-            if len(ext) > 3:
-                extracted.add(ext)
+        # Removed naive CamelCase regex to prevent non-skill false positives.
                 
         # Deduplicate case-insensitively, preferring CamelCase or Acronyms over .title()
         deduped = {}
