@@ -254,7 +254,20 @@ async def parse_resume(file: UploadFile = File(None), text_input: str = Form(Non
                 import pdfplumber
                 import io
                 with pdfplumber.open(io.BytesIO(content)) as pdf:
-                    resume_text = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
+                    # Using `or ""` in case extract_text() returns None
+                    resume_text = "\n".join((page.extract_text() or "") for page in pdf.pages)
+                    
+                # 4. OCR FALLBACK FOR SCANNED IMAGES (Bulletproof Extraction)
+                if len(resume_text.strip()) < 50:
+                    try:
+                        import pytesseract
+                        from pdf2image import convert_from_bytes
+                        print("Empty PDF detected. Running OCR...")
+                        images = convert_from_bytes(content)
+                        resume_text = "\n".join(pytesseract.image_to_string(img) for img in images)
+                    except Exception as ocr_e:
+                        print(f"OCR failed (Tesseract may not be installed): {ocr_e}")
+                        
             except Exception as e:
                 print(f"pdfplumber failed: {e}. Utilizing text stream recovery.")
                 resume_text = content.decode('utf-8', errors='ignore')
@@ -263,7 +276,14 @@ async def parse_resume(file: UploadFile = File(None), text_input: str = Form(Non
                 import docx
                 import io
                 doc = docx.Document(io.BytesIO(content))
-                resume_text = "\n".join(p.text for p in doc.paragraphs)
+                # Add table text extraction!
+                paragraphs = [p.text for p in doc.paragraphs]
+                tables = []
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            tables.append(cell.text)
+                resume_text = "\n".join(paragraphs + tables)
             except Exception as e:
                 print(f"docx failed: {e}. Utilizing text stream recovery.")
                 resume_text = content.decode('utf-8', errors='ignore')

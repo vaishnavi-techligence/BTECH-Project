@@ -139,6 +139,24 @@ class SkillDecomposedMatcher:
     def __init__(self):
         self.emb_handler = EmbeddingHandler()
         
+        # 3. SKILL ONTOLOGY (Parent-Child graph for deep mapping)
+        self.skill_ontology = {
+            "aws": ["ec2", "s3", "lambda", "dynamodb", "rds", "cloudformation", "vpc", "iam"],
+            "gcp": ["compute engine", "cloud storage", "bigquery", "kubernetes engine", "gke", "cloud run"],
+            "azure": ["azure active directory", "azure blob storage", "aks", "azure functions"],
+            "javascript": ["react", "node.js", "vue.js", "angular", "typescript", "express.js", "next.js"],
+            "python": ["django", "flask", "fastapi", "pandas", "numpy", "pytorch", "tensorflow", "scikit-learn"],
+            "java": ["spring boot", "hibernate", "maven", "gradle"],
+            "c#": [".net", "asp.net", "entity framework", "xamarin"],
+            "devops": ["docker", "kubernetes", "jenkins", "gitlab ci", "terraform", "ansible"],
+            "machine learning": ["deep learning", "nlp", "computer vision", "pytorch", "tensorflow", "scikit-learn", "llm", "rag"],
+            "databases": ["sql", "mysql", "postgresql", "mongodb", "redis", "cassandra", "elasticsearch"],
+            "frontend": ["html", "css", "javascript", "react", "vue.js", "angular", "tailwind"]
+        }
+        
+        # Store candidate YoE globally during matching
+        self.candidate_experience = {}
+        
         # Load HuggingFace JobBERT NER Pipeline for Contextual Skill Extraction (Option 1)
         self.ner_pipeline = None
         try:
@@ -209,7 +227,15 @@ class SkillDecomposedMatcher:
                 "promethues", "grafana", "splunk", "databricks", "snowflake", "bigquery", "redshift", 
                 "oracle", "sql server", "firebase", "supabase", "pandas", "numpy", "scikit-learn", 
                 "keras", "opencv", "huggingface", "llm", "langchain", "prompt engineering", "airflow", 
-                "dbt", "kafka", "rabbitmq", "celery", "graphql", "grpc", "websockets", "microservices"
+                "dbt", "kafka", "rabbitmq", "celery", "graphql", "grpc", "websockets", "microservices",
+                "next.js", "nuxt", "vite", "webpack", "babel", "sass", "less", "tailwind", "bootstrap", 
+                "material ui", "ant design", "chakra ui", "framer motion", "three.js", "webgl", "webrtc", 
+                "socket.io", "oauth", "jwt", "saml", "openid connect", "keycloak", "auth0", "cognito", 
+                "iam", "kms", "vpc", "ec2", "s3", "lambda", "fargate", "ecs", "eks", "aks", "gke", 
+                "cloudformation", "pulumi", "helm", "argo", "istio", "linkerd", "consul", "vault", 
+                "packer", "vagrant", "virtualbox", "vmware", "hyper-v", "xen", "kvm", "qemu", "lxc", 
+                "lxd", "podman", "buildah", "skopeo", "cri-o", "containerd", "rancher", "openshift", 
+                "tanzu", "anthos", "nomad", "mesos", "marathon", "zookeeper", "etcd"
             ]
         }
         
@@ -227,21 +253,41 @@ class SkillDecomposedMatcher:
         # 0. ADVANCED NER EXTRACTION (HuggingFace Transformer)
         if self.ner_pipeline:
             try:
-                # Truncate to roughly 1500 chars to avoid hitting the 512 token limit of BERT models
-                text_slice = text[:1500] 
-                ner_results = self.ner_pipeline(text_slice)
-                for entity in ner_results:
-                    # Depending on aggregation_strategy, the key is usually 'entity_group' or 'entity'
-                    group = entity.get('entity_group', entity.get('entity', ''))
-                    # JobBERT outputs 'B', 'I' (for B-Skill, I-Skill) or 'Skill'
-                    if 'Skill' in group or 'Knowledge' in group or group in ['B', 'I', 'B-Skill', 'I-Skill']:
-                        word = entity['word'].strip()
-                        # Clean up subword token artifacts like '##'
-                        word = word.replace('##', '').strip()
-                        if len(word) > 2: # Ignore tiny subwords
-                            extracted.add(word)
+                # Process the entire resume in chunks to avoid hitting the 512 token limit of BERT models
+                chunk_size = 1500 
+                for i in range(0, len(text), chunk_size):
+                    text_slice = text[i:i+chunk_size]
+                    ner_results = self.ner_pipeline(text_slice)
+                    for entity in ner_results:
+                        # Depending on aggregation_strategy, the key is usually 'entity_group' or 'entity'
+                        group = entity.get('entity_group', entity.get('entity', ''))
+                        # JobBERT outputs 'B', 'I' (for B-Skill, I-Skill) or 'Skill'
+                        if 'Skill' in group or 'Knowledge' in group or group in ['B', 'I', 'B-Skill', 'I-Skill']:
+                            word = entity['word'].strip()
+                            # Clean up subword token artifacts like '##'
+                            word = word.replace('##', '').strip()
+                            if len(word) > 2: # Ignore tiny subwords
+                                extracted.add(word)
             except Exception as e:
                 print(f"NER Extraction Error: {e}")
+                
+        # 0.5 LLM BASED EXTRACTION (Now extracts Years of Experience)
+        try:
+            from llm_module.generator import AgenticLLMEngine
+            import json
+            engine = AgenticLLMEngine()
+            prompt = f"Extract technical skills, programming languages, and tools from the resume text. Output a JSON object mapping each skill to the estimated years of experience based on the text (e.g., {{\\\"Python\\\": 3}}). If years are not explicitly stated, estimate 1 for recent or 0 for unknown. Respond ONLY with valid JSON.\n\nResume text:\n{text[:8000]}"
+            llm_skills_raw = engine._query_local_llm(prompt, system_prompt="You are an expert ATS JSON parser. Output ONLY valid JSON, no markdown, no text.")
+            if llm_skills_raw:
+                llm_skills_raw = llm_skills_raw.replace('```json', '').replace('```', '').strip()
+                skill_dict = json.loads(llm_skills_raw)
+                for skill, years in skill_dict.items():
+                    cleaned = skill.strip()
+                    if 1 < len(cleaned) < 30:
+                        extracted.add(cleaned)
+                        self.candidate_experience[cleaned.lower()] = years
+        except Exception as e:
+            print(f"LLM Skill Extraction Error: {e}")
         
         # 1. Multi-domain dictionary match
         for cat, skills in self.known_skills.items():
@@ -461,13 +507,48 @@ class SkillDecomposedMatcher:
             # Fallback if no skills are matched in JD
             jd_skills = {"Software Engineering", "Problem Solving", "Communication"}
             
-        # Classify Core vs Preferred in JD.
-        # For simplicity, we define Core as the first 60% of skills or based on occurrence in JD's top paragraphs.
-        # In a real pipeline, JD parsing tags them.
-        sorted_jd_skills = sorted(list(jd_skills))
-        split_idx = max(1, int(len(sorted_jd_skills) * 0.6))
-        core_skills = set(sorted_jd_skills[:split_idx])
-        preferred_skills = set(sorted_jd_skills[split_idx:])
+        # Classify Core vs Preferred in JD based on Context and Frequency.
+        core_skills = set()
+        preferred_skills = set()
+        
+        is_preferred_section = False
+        preferred_text = ""
+        core_text = ""
+        
+        # 1. Split JD into Core vs Preferred text sections
+        for line in jd_text.split('\n'):
+            line_lower = line.strip().lower()
+            if not line_lower:
+                continue
+                
+            # Treat short lines with these keywords as section headers
+            if len(line_lower.split()) < 10:
+                if any(h in line_lower for h in ["preferred", "bonus", "nice to have", "plus", "optional"]):
+                    is_preferred_section = True
+                elif any(h in line_lower for h in ["required", "requirements", "must have", "qualifications", "responsibilities", "what you need", "about", "role", "description", "minimum", "basic"]):
+                    is_preferred_section = False
+                    
+            if is_preferred_section:
+                preferred_text += line + "\n"
+            else:
+                core_text += line + "\n"
+                
+        # 2. Classify each extracted skill
+        for skill in jd_skills:
+            skill_pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+            freq = len(re.findall(skill_pattern, jd_text.lower()))
+            in_core = bool(re.search(skill_pattern, core_text.lower()))
+            in_pref = bool(re.search(skill_pattern, preferred_text.lower()))
+            
+            # If it explicitly only lives in the "Preferred" section of the JD, it's preferred.
+            if in_pref and not in_core:
+                preferred_skills.add(skill)
+            # If it's mentioned multiple times throughout the document, it's heavily relied upon -> Core.
+            elif freq >= 2:
+                core_skills.add(skill)
+            # Default everything else to Core (an ATS should strictly grade standard requirements).
+            else:
+                core_skills.add(skill)
         
         # Calculate matches
         matched_core = []
@@ -475,25 +556,43 @@ class SkillDecomposedMatcher:
         matched_preferred = []
         missing_preferred = []
         
+        # 1. APPLY SKILL ONTOLOGY INFERENCE
+        # If candidate has multiple child skills, automatically credit the parent skill
+        resume_lower_text = resume_text.lower()
+        resume_skills_lower = {s.lower() for s in resume_skills}
+        for parent, children in self.skill_ontology.items():
+            child_matches = sum(1 for child in children if child in resume_skills_lower or child in resume_lower_text)
+            if child_matches >= 2:
+                resume_skills.add(parent.title())
+                resume_lower_text += f" {parent.lower()} " # inject so downstream matching finds it
+                
         # We use a semantic matching check. If exact keyword exists in resume, it is 1.0.
         # Otherwise, we calculate semantic similarity between the skill and resume's sentence segments.
-        resume_sentences = [s.strip() for s in re.split(r'[.\n]', resume_text) if len(s.strip()) > 5]
+        resume_sentences = [s.strip() for s in re.split(r'[.\n]', resume_lower_text) if len(s.strip()) > 5]
         resume_embs = [self.emb_handler.get_embedding(s) for s in resume_sentences]
         
         def check_skill_match(skill: str) -> float:
             skill_lower = skill.lower()
             # 1. Check exact match in resume
-            if skill_lower in resume_text.lower():
+            if skill_lower in resume_lower_text:
                 return 1.0
                 
             # 2. Check semantic similarity
             skill_emb = self.emb_handler.get_embedding(skill)
             max_sim = 0.0
-            for emb in resume_embs:
-                sim = calculate_cosine_similarity(skill_emb, emb)
+            
+            # Context-Awareness filter: Ignore aspirational sentences (False Positive Reduction)
+            aspirational_words = ["learning", "want to", "aspire", "future", "looking forward", "hope", "plan to", "interested in"]
+            
+            for sentence in resume_sentences:
+                # Skip sentences that express aspiration rather than possession
+                if any(aw in sentence for aw in aspirational_words) and not any(pw in sentence for pw in ["used", "developed", "built", "implemented", "applied"]):
+                    continue
+                    
+                sim = calculate_cosine_similarity(skill_emb, self.emb_handler.get_embedding(sentence))
                 if sim > max_sim:
                     max_sim = sim
-            # If similarity is above 0.75, treat as partially matched (e.g. PyTorch vs Deep Learning)
+            # If similarity is above 0.75, treat as partially matched
             return max_sim if max_sim > 0.7 else 0.0
             
         for skill in core_skills:
